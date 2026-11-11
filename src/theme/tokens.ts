@@ -1,9 +1,9 @@
 /**
  * Laya (లయ) Mobile — Design System Tokens
- * Calm Minimalist Matte Dark Theme (Distraction-Free, Human-First)
+ * Calm Minimalist Theme System (Dark & Light Matte Palettes)
  */
 
-export const colors = {
+export const darkColors = {
   // Backgrounds & Surfaces (Solid Matte, Zero Glassmorphism)
   bgDark: '#0E0F12',
   bgCard: '#16171B',
@@ -13,14 +13,14 @@ export const colors = {
   borderActive: '#363842',
 
   // Restrained, Grounded Accents
-  primary: '#38BDF8', // Calm Sky Slate
+  primary: '#38BDF8',
   primaryHover: '#0284C7',
-  done: '#22C55E', // Natural Forest Green
-  progress: '#38BDF8', // Calm Sky Blue
-  ignored: '#71717A', // Serene Stone Slate
+  done: '#22C55E',
+  progress: '#38BDF8',
+  ignored: '#71717A',
   ignoredBg: '#1B1C22',
-  warning: '#F59E0B', // Muted Amber
-  danger: '#EF4444', // Clean Rose
+  warning: '#F59E0B',
+  danger: '#EF4444',
 
   // Text Hierarchy
   textPrimary: '#F4F4F5',
@@ -31,6 +31,34 @@ export const colors = {
   groupPersonal: '#94A3B8',
   groupWork: '#38BDF8',
 };
+
+export const lightColors: typeof darkColors = {
+  bgDark: '#F8FAFC',
+  bgCard: '#FFFFFF',
+  bgCardHover: '#F1F5F9',
+  bgInput: '#F1F5F9',
+  borderSubtle: '#E2E8F0',
+  borderActive: '#CBD5E1',
+
+  primary: '#0284C7',
+  primaryHover: '#0369A1',
+  done: '#16A34A',
+  progress: '#0284C7',
+  ignored: '#64748B',
+  ignoredBg: '#F1F5F9',
+  warning: '#D97706',
+  danger: '#DC2626',
+
+  textPrimary: '#0F172A',
+  textSecondary: '#475569',
+  textTertiary: '#64748B',
+
+  groupPersonal: '#64748B',
+  groupWork: '#0284C7',
+};
+
+export const colors = darkColors;
+export type ColorPalette = typeof darkColors;
 
 export const spacing = {
   xs: 4,
@@ -55,4 +83,3 @@ export const typography = {
   body: 13,
   caption: 11,
 };
-

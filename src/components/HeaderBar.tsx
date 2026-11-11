@@ -6,6 +6,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { colors, spacing, radiuses, typography } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 import { OperationalDateInfo } from '../core/recurrence';
 
 interface Props {
@@ -30,6 +31,7 @@ export const HeaderBar: React.FC<Props> = ({
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const formattedDate = `${dayNames[opInfo.dayOfWeek]}, ${monthNames[opInfo.month]} ${opInfo.dayOfMonth}`;
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <View style={styles.container}>
@@ -58,6 +60,14 @@ export const HeaderBar: React.FC<Props> = ({
             <Text style={styles.syncStatusText}>
               {isSyncing ? 'Syncing...' : isOnline ? 'Online' : 'Offline'}
             </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.themeToggleBtn}
+            onPress={toggleTheme}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.themeToggleText}>{theme === 'dark' ? '🌙' : '☀️'}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -130,6 +140,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     gap: 5,
+  },
+  themeToggleBtn: {
+    backgroundColor: colors.bgCard,
+    borderColor: colors.borderSubtle,
+    borderWidth: 1,
+    borderRadius: radiuses.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeToggleText: {
+    fontSize: 12,
   },
   syncStatusText: {
     color: colors.textSecondary,

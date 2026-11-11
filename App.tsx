@@ -15,6 +15,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from './src/theme/tokens';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { styles } from './App.styles';
 import { useLayaTracker } from './src/hooks/useLayaTracker';
 
@@ -27,9 +28,10 @@ import { LoginScreen } from './src/screens/LoginScreen';
 
 type ActiveView = 'tasks' | 'charts';
 
-export default function App() {
+function MainApp() {
   const [activeView, setActiveView] = useState<ActiveView>('tasks');
   const [modalVisible, setModalVisible] = useState(false);
+  const { theme } = useTheme();
 
   const {
     loading,
@@ -82,7 +84,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="light" />
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
 
       {/* Header Bar */}
       <HeaderBar
@@ -159,5 +161,13 @@ export default function App() {
         onSave={handleSaveNewTask}
       />
     </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <MainApp />
+    </ThemeProvider>
   );
 }
