@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { colors } from '../theme/tokens';
-import { EvaluatedTask, UserGroup } from '../core/types';
+import { Task, EvaluatedTask, UserGroup } from '../core/types';
 import { speakReminder } from '../services/voice';
 import { styles } from './TaskCard.styles';
 
@@ -17,6 +17,8 @@ interface Props {
   onToggleMilestone: (taskId: string, milestoneId: string) => void;
   onUpdateQuantified: (taskId: string, delta: number) => void;
   onToggleIgnore: (taskId: string) => void;
+  onEditTask?: (task: Task) => void;
+  onDeleteTask?: (taskId: string, title: string) => void;
 }
 
 export const TaskCard: React.FC<Props> = ({
@@ -26,6 +28,8 @@ export const TaskCard: React.FC<Props> = ({
   onToggleMilestone,
   onUpdateQuantified,
   onToggleIgnore,
+  onEditTask,
+  onDeleteTask,
 }) => {
   const { task, isCompleted, isIgnored, percentage, completedMilestones, quantifiedValue } = evaluated;
 
@@ -137,6 +141,26 @@ export const TaskCard: React.FC<Props> = ({
         >
           <Text style={styles.voiceBtnText}>🔊 Voice</Text>
         </TouchableOpacity>
+
+        {onEditTask && (
+          <TouchableOpacity
+            style={styles.cardActionBtn}
+            onPress={() => onEditTask(task)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cardActionText}>✏️</Text>
+          </TouchableOpacity>
+        )}
+
+        {onDeleteTask && (
+          <TouchableOpacity
+            style={styles.cardActionBtn}
+            onPress={() => onDeleteTask(task.id, task.title)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.cardActionText}>🗑️</Text>
+          </TouchableOpacity>
+        )}
 
         <Text style={styles.progressText}>{percentage}%</Text>
       </View>

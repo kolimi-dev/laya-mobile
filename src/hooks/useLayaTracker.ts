@@ -178,10 +178,17 @@ export function useLayaTracker() {
     await StorageService.savePinnedCharts(list);
   };
 
-  const handleSaveNewTask = async (newTask: Task) => {
-    await StorageService.saveTask(newTask);
-    setTasks([...tasks, newTask]);
-    logger.log('action', 'create_task', { taskId: newTask.id, title: newTask.title });
+  const handleSaveNewTask = async (task: Task) => {
+    await StorageService.saveTask(task);
+    const exists = tasks.some((t) => t.id === task.id);
+    setTasks(exists ? tasks.map((t) => (t.id === task.id ? task : t)) : [...tasks, task]);
+    logger.log('action', exists ? 'update_task' : 'create_task', { taskId: task.id, title: task.title });
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    await StorageService.deleteTask(taskId);
+    setTasks(tasks.filter((t) => t.id !== taskId));
+    logger.log('action', 'delete_task', { taskId });
   };
 
   const handleLogout = async () => {
@@ -216,6 +223,7 @@ export function useLayaTracker() {
     handleMoveChart,
     handleRemoveChart,
     handleSaveNewTask,
+    handleDeleteTask,
     handleLogout,
   };
 }

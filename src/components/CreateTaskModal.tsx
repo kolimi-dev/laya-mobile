@@ -3,7 +3,7 @@
  * Strict Form Field Isolation & Human Frequencies (ADR-0005)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,11 +15,20 @@ import {
 import { colors } from '../theme/tokens';
 import { Task, TaskFlavor, FrequencyType, UserGroup, MilestoneItem } from '../core/types';
 import { generateUUID } from '../services/storage';
+import { MilestonesBuilder } from './MilestonesBuilder';
 import { styles } from './CreateTaskModal.styles';
+
+const FREQUENCIES: { id: FrequencyType; label: string }[] = [
+  { id: 'daily', label: 'Every Day' },
+  { id: 'days_of_week', label: 'Weekdays' },
+  { id: 'monthly', label: 'Monthly' },
+  { id: 'anytime', label: 'Flexible' },
+];
 
 interface Props {
   visible: boolean;
   groups: UserGroup[];
+  initialTask?: Task | null;
   onClose: () => void;
   onSave: (task: Task) => void;
 }
@@ -27,6 +36,7 @@ interface Props {
 export const CreateTaskModal: React.FC<Props> = ({
   visible,
   groups,
+  initialTask,
   onClose,
   onSave,
 }) => {
@@ -41,29 +51,35 @@ export const CreateTaskModal: React.FC<Props> = ({
     { id: '2', label: 'Step 2', points: 1 },
   ]);
 
-  const handleAddMilestone = () => {
-    setMilestones([
-      ...milestones,
-      { id: Date.now().toString(), label: `Step ${milestones.length + 1}`, points: 1 },
-    ]);
-  };
-
-  const handleRemoveMilestone = (id: string) => {
-    setMilestones(milestones.filter((m) => m.id !== id));
-  };
-
-  const handleUpdateMilestone = (id: string, text: string) => {
-    setMilestones(
-      milestones.map((m) => (m.id === id ? { ...m, label: text } : m))
-    );
-  };
+  useEffect(() => {
+    if (initialTask) {
+      setTitle(initialTask.title);
+      setGroupId(initialTask.groupId);
+      setFlavor(initialTask.flavor);
+      setFrequency(initialTask.frequency);
+      setTargetAmount(initialTask.targetAmount ? String(initialTask.targetAmount) : '');
+      setUnit(initialTask.unit || '');
+      setMilestones(initialTask.milestones || []);
+    } else {
+      setTitle('');
+      setGroupId(groups[0]?.id || 'grp_personal');
+      setFlavor('checklist');
+      setFrequency('daily');
+      setTargetAmount('4');
+      setUnit('L');
+      setMilestones([
+        { id: '1', label: 'Step 1', points: 1 },
+        { id: '2', label: 'Step 2', points: 1 },
+      ]);
+    }
+  }, [initialTask, visible]);
 
   const handleSubmit = () => {
     if (!title.trim()) return;
 
-    const newTask: Task = {
-      id: generateUUID('tsk'),
-      userId: 'usr_friend_1',
+    const taskData: Task = {
+      id: initialTask?.id || generateUUID('tsk'),
+      userId: initialTask?.userId || 'usr_friend_1',
       groupId,
       title: title.trim(),
       flavor,
@@ -71,12 +87,12 @@ export const CreateTaskModal: React.FC<Props> = ({
       targetAmount: flavor === 'checklist' && targetAmount ? parseFloat(targetAmount) : undefined,
       unit: flavor === 'checklist' ? unit : undefined,
       milestones: flavor === 'milestone' ? milestones : undefined,
-      sortOrder: Date.now(),
-      createdAt: new Date().toISOString(),
+      sortOrder: initialTask?.sortOrder || Date.now(),
+      createdAt: initialTask?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    onSave(newTask);
+    onSave(taskData);
     setTitle('');
     onClose();
   };
@@ -86,7 +102,7 @@ export const CreateTaskModal: React.FC<Props> = ({
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <View style={styles.header}>
-            <Text style={styles.modalTitle}>Add New Habit</Text>
+            <Text style={styles.modalTitle}>{initialTask ? 'Edit Habit' : 'Add New Habit'}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Text style={styles.closeText}>✕</Text>
             </TouchableOpacity>
@@ -174,43 +190,21 @@ export const CreateTaskModal: React.FC<Props> = ({
             )}
 
             {flavor === 'milestone' && (
-              <View style={styles.field}>
-                <Text style={styles.label}>Milestone Checkpoints</Text>
-                {milestones.map((m) => (
-                  <View key={m.id} style={styles.milestoneRow}>
-                    <TextInput
-                      style={[styles.input, { flex: 1 }]}
-                      value={m.label}
-                      onChangeText={(t) => handleUpdateMilestone(m.id, t)}
-                    />
-                    <TouchableOpacity
-                      onPress={() => handleRemoveMilestone(m.id)}
-                      style={styles.delBtn}
-                    >
-                      <Text style={styles.delText}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                <TouchableOpacity onPress={handleAddMilestone} style={styles.addBtn}>
-                  <Text style={styles.addText}>+ Add Checkpoint</Text>
-                </TouchableOpacity>
-              </View>
+              <MilestonesBuilder
+                milestones={milestones}
+                onChange={setMilestones}
+              />
             )}
 
             {/* Repeat Frequency */}
             <View style={styles.field}>
               <Text style={styles.label}>Repeat Frequency</Text>
               <View style={styles.pillRow}>
-                {[
-                  { id: 'daily', label: 'Every Day' },
-                  { id: 'days_of_week', label: 'Weekdays' },
-                  { id: 'monthly', label: 'Monthly' },
-                  { id: 'anytime', label: 'Flexible / Anytime' },
-                ].map((f) => (
+                {FREQUENCIES.map((f) => (
                   <TouchableOpacity
                     key={f.id}
                     style={[styles.selectPill, frequency === f.id && styles.selectPillActive]}
-                    onPress={() => setFrequency(f.id as FrequencyType)}
+                    onPress={() => setFrequency(f.id)}
                   >
                     <Text style={[styles.selectText, frequency === f.id && styles.selectTextActive]}>
                       {f.label}
@@ -227,7 +221,7 @@ export const CreateTaskModal: React.FC<Props> = ({
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleSubmit} style={styles.submitBtn}>
-              <Text style={styles.submitText}>Save Habit</Text>
+              <Text style={styles.submitText}>{initialTask ? 'Save Changes' : 'Save Habit'}</Text>
             </TouchableOpacity>
           </View>
         </View>

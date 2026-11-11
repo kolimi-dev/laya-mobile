@@ -6,7 +6,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, spacing, radiuses, typography } from '../theme/tokens';
-import { EvaluatedTask, UserGroup } from '../core/types';
+import { EvaluatedTask, UserGroup, Task } from '../core/types';
 import { TaskCard } from '../components/TaskCard';
 
 interface Props {
@@ -17,6 +17,8 @@ interface Props {
   onToggleMilestone: (taskId: string, milestoneId: string) => void;
   onUpdateQuantified: (taskId: string, delta: number) => void;
   onToggleIgnore: (taskId: string) => void;
+  onEditTask?: (task: Task) => void;
+  onDeleteTask?: (taskId: string, title: string) => void;
 }
 
 export const TodayTasksScreen: React.FC<Props> = ({
@@ -27,6 +29,8 @@ export const TodayTasksScreen: React.FC<Props> = ({
   onToggleMilestone,
   onUpdateQuantified,
   onToggleIgnore,
+  onEditTask,
+  onDeleteTask,
 }) => {
   return (
     <View style={styles.container}>
@@ -51,6 +55,8 @@ export const TodayTasksScreen: React.FC<Props> = ({
             onToggleMilestone={onToggleMilestone}
             onUpdateQuantified={onUpdateQuantified}
             onToggleIgnore={onToggleIgnore}
+            onEditTask={onEditTask}
+            onDeleteTask={onDeleteTask}
           />
         ))
       )}
@@ -74,6 +80,8 @@ export const TodayTasksScreen: React.FC<Props> = ({
               onToggleMilestone={onToggleMilestone}
               onUpdateQuantified={onUpdateQuantified}
               onToggleIgnore={onToggleIgnore}
+              onEditTask={onEditTask}
+              onDeleteTask={onDeleteTask}
             />
           ))}
         </View>

@@ -11,11 +11,13 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from './src/theme/tokens';
+import { Task } from './src/core/types';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { styles } from './App.styles';
 import { useLayaTracker } from './src/hooks/useLayaTracker';
@@ -34,6 +36,7 @@ type ActiveView = 'tasks' | 'charts';
 function MainApp() {
   const [activeView, setActiveView] = useState<ActiveView>('tasks');
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [profileVisible, setProfileVisible] = useState(false);
   const [consentAgreed, setConsentAgreed] = useState(true);
   const { theme } = useTheme();
@@ -75,6 +78,7 @@ function MainApp() {
     handleMoveChart,
     handleRemoveChart,
     handleSaveNewTask,
+    handleDeleteTask,
   } = useLayaTracker();
 
   if (loading) {
@@ -132,7 +136,13 @@ function MainApp() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => {
+            setEditingTask(null);
+            setModalVisible(true);
+          }}
+        >
           <Text style={styles.addBtnText}>+ Add</Text>
         </TouchableOpacity>
       </View>
@@ -157,6 +167,20 @@ function MainApp() {
             onToggleMilestone={handleToggleMilestone}
             onUpdateQuantified={handleUpdateQuantified}
             onToggleIgnore={handleToggleIgnore}
+            onEditTask={(task) => {
+              setEditingTask(task);
+              setModalVisible(true);
+            }}
+            onDeleteTask={(taskId, taskTitle) => {
+              Alert.alert(
+                'Delete Habit',
+                `Are you sure you want to delete "${taskTitle}"?`,
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Delete', style: 'destructive', onPress: () => handleDeleteTask(taskId) },
+                ]
+              );
+            }}
           />
         ) : (
           <TaskChartsScreen
@@ -171,12 +195,19 @@ function MainApp() {
         )}
       </ScrollView>
 
-      {/* Create Task Modal */}
+      {/* Create / Edit Task Modal */}
       <CreateTaskModal
         visible={modalVisible}
         groups={groups}
-        onClose={() => setModalVisible(false)}
-        onSave={handleSaveNewTask}
+        initialTask={editingTask}
+        onClose={() => {
+          setModalVisible(false);
+          setEditingTask(null);
+        }}
+        onSave={(task) => {
+          handleSaveNewTask(task);
+          setEditingTask(null);
+        }}
       />
 
       {/* First-visit Privacy & Ethics Consent */}

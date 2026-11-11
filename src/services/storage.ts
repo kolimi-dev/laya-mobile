@@ -112,6 +112,13 @@ export class StorageService {
     await AsyncStorage.setItem(KEYS.TASKS, JSON.stringify(tasks));
   }
 
+  public static async deleteTask(taskId: string): Promise<void> {
+    const raw = await AsyncStorage.getItem(KEYS.TASKS);
+    const tasks: Task[] = raw ? JSON.parse(raw) : [];
+    const remaining = tasks.filter((t) => t.id !== taskId);
+    await AsyncStorage.setItem(KEYS.TASKS, JSON.stringify(remaining));
+  }
+
   public static async appendEvent(event: CompletionEvent): Promise<CompletionEvent[]> {
     const raw = await AsyncStorage.getItem(KEYS.EVENTS);
     const events: CompletionEvent[] = raw ? JSON.parse(raw) : [];

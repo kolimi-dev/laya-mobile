@@ -189,5 +189,16 @@ export const styles = StyleSheet.create({
     fontSize: typography.caption,
     fontWeight: '600',
   },
+  cardActionBtn: {
+    backgroundColor: colors.bgInput,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radiuses.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  cardActionText: {
+    fontSize: 12,
+  },
 });
 
