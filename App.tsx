@@ -3,7 +3,7 @@
  * Natural Cadence, Guilt-Free Habit Engine (ADR-0001 through ADR-0008)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   SafeAreaView,
   View,
@@ -12,6 +12,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 
 import { colors } from './src/theme/tokens';
@@ -22,6 +23,7 @@ import { useLayaTracker } from './src/hooks/useLayaTracker';
 import { HeaderBar } from './src/components/HeaderBar';
 import { GroupFilterPills } from './src/components/GroupFilterPills';
 import { CreateTaskModal } from './src/components/CreateTaskModal';
+import { ConsentModal } from './src/components/ConsentModal';
 import { TodayTasksScreen } from './src/screens/TodayTasksScreen';
 import { TaskChartsScreen } from './src/screens/TaskChartsScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
@@ -31,7 +33,19 @@ type ActiveView = 'tasks' | 'charts';
 function MainApp() {
   const [activeView, setActiveView] = useState<ActiveView>('tasks');
   const [modalVisible, setModalVisible] = useState(false);
+  const [consentAgreed, setConsentAgreed] = useState(true);
   const { theme } = useTheme();
+
+  useEffect(() => {
+    AsyncStorage.getItem('@laya:consent_agreed').then((val) => {
+      if (!val) setConsentAgreed(false);
+    });
+  }, []);
+
+  const handleAgreeConsent = async () => {
+    await AsyncStorage.setItem('@laya:consent_agreed', 'true');
+    setConsentAgreed(true);
+  };
 
   const {
     loading,
@@ -78,6 +92,7 @@ function MainApp() {
           onLoginSuccess={(newSession) => setSession(newSession)}
           onSkipOffline={() => setIsAuthSkipped(true)}
         />
+        <ConsentModal visible={!consentAgreed} onAgree={handleAgreeConsent} />
       </SafeAreaView>
     );
   }
@@ -159,6 +174,12 @@ function MainApp() {
         groups={groups}
         onClose={() => setModalVisible(false)}
         onSave={handleSaveNewTask}
+      />
+
+      {/* First-visit Privacy & Ethics Consent */}
+      <ConsentModal
+        visible={!consentAgreed}
+        onAgree={handleAgreeConsent}
       />
     </SafeAreaView>
   );
