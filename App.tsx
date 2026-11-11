@@ -4,15 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  SafeAreaView,
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { SafeAreaView, View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 
@@ -59,6 +51,8 @@ function MainApp() {
     isAuthSkipped,
     setIsAuthSkipped,
     isOnline,
+    isSyncing,
+    triggerSync,
     opInfo,
     activeGroupId,
     setActiveGroupId,
@@ -112,6 +106,8 @@ function MainApp() {
         opInfo={opInfo}
         consistencyScore={consistencyScore}
         isOnline={isOnline}
+        isSyncing={isSyncing}
+        onSyncPress={triggerSync}
         onProfilePress={() => setProfileVisible(true)}
       />
 

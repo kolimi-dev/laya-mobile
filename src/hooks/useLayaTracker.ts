@@ -8,8 +8,10 @@ import { Task, CompletionEvent, UserGroup, PinnedChart, EvaluatedTask } from '..
 import { calculateConsistencyRating, evaluateTaskProgress } from '../core/math';
 import { getOperationalDate, isTaskScheduledForDate, filterEventsForTaskCadence } from '../core/recurrence';
 import { StorageService, generateUUID } from '../services/storage';
+import { SyncService } from '../services/sync';
+import { CONFIG } from '../config';
 import { logger } from '../core/logger';
-import { AuthService, AuthSession, DEFAULT_BACKEND_URL } from '../services/auth';
+import { AuthService, AuthSession } from '../services/auth';
 import { getChartRecommendations, createPinnedChartFromRecommendation, ChartRecommendation } from '../services/ai-suggestions';
 
 export function useLayaTracker() {
@@ -23,16 +25,22 @@ export function useLayaTracker() {
   const [events, setEvents] = useState<CompletionEvent[]>([]);
   const [pinnedCharts, setPinnedCharts] = useState<PinnedChart[]>([]);
   const [isOnline, setIsOnline] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const activeUserId = session?.userId || 'usr_guest';
   const opInfo = useMemo(() => getOperationalDate(), []);
 
+  const triggerSync = useCallback(async () => {
+    setIsSyncing(true);
+    const res = await SyncService.syncWithBackend(CONFIG.BACKEND_URL, activeUserId);
+    setIsOnline(res.isOnline);
+    setIsSyncing(false);
+  }, [activeUserId]);
+
   useEffect(() => {
     async function init() {
       const storedSession = await AuthService.getStoredSession();
-      if (storedSession) {
-        setSession(storedSession);
-      }
+      if (storedSession) setSession(storedSession);
       const data = await StorageService.loadInitialData(storedSession?.userId || 'usr_guest');
       setGroups(data.groups);
       setTasks(data.tasks);
@@ -44,6 +52,14 @@ export function useLayaTracker() {
     init();
   }, []);
 
+  useEffect(() => {
+    if (!loading) {
+      triggerSync();
+      const interval = setInterval(triggerSync, CONFIG.SYNC_INTERVAL_MS);
+      return () => clearInterval(interval);
+    }
+  }, [loading, triggerSync]);
+
   const evaluatedTasks = useMemo<EvaluatedTask[]>(() => {
     return tasks
       .filter((task) => (activeGroupId ? task.groupId === activeGroupId : true) && isTaskScheduledForDate(task, opInfo))
@@ -54,19 +70,13 @@ export function useLayaTracker() {
   const completedOrRestedTasks = useMemo(() => evaluatedTasks.filter((t) => t.isCompleted || t.isIgnored), [evaluatedTasks]);
 
   const consistencyScore = useMemo(() => {
-    let completedPoints = 0;
-    let scheduledPoints = 0;
-    let ignoredPoints = 0;
-
+    let completed = 0, scheduled = 0, ignored = 0;
     for (const t of evaluatedTasks) {
-      scheduledPoints += 100;
-      if (t.isIgnored) {
-        ignoredPoints += 100;
-      } else {
-        completedPoints += t.percentage;
-      }
+      scheduled += 100;
+      if (t.isIgnored) ignored += 100;
+      else completed += t.percentage;
     }
-    return calculateConsistencyRating(completedPoints, scheduledPoints, ignoredPoints);
+    return calculateConsistencyRating(completed, scheduled, ignored);
   }, [evaluatedTasks]);
 
   const chartRecommendations = useMemo(
@@ -164,10 +174,7 @@ export function useLayaTracker() {
     if (targetIndex < 0 || targetIndex >= pinnedCharts.length) return;
 
     const list = [...pinnedCharts];
-    const temp = list[index];
-    list[index] = list[targetIndex];
-    list[targetIndex] = temp;
-
+    [list[index], list[targetIndex]] = [list[targetIndex], list[index]];
     setPinnedCharts(list);
     await StorageService.savePinnedCharts(list);
   };
@@ -204,6 +211,8 @@ export function useLayaTracker() {
     isAuthSkipped,
     setIsAuthSkipped,
     isOnline,
+    isSyncing,
+    triggerSync,
     opInfo,
     activeGroupId,
     setActiveGroupId,
