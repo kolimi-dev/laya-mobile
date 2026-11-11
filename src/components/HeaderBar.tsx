@@ -15,6 +15,7 @@ interface Props {
   isOnline: boolean;
   isSyncing?: boolean;
   onSyncPress?: () => void;
+  onProfilePress?: () => void;
 }
 
 export const HeaderBar: React.FC<Props> = ({
@@ -23,6 +24,7 @@ export const HeaderBar: React.FC<Props> = ({
   isOnline,
   isSyncing = false,
   onSyncPress,
+  onProfilePress,
 }) => {
   const monthNames = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -68,6 +70,14 @@ export const HeaderBar: React.FC<Props> = ({
             activeOpacity={0.7}
           >
             <Text style={styles.themeToggleText}>{theme === 'dark' ? '🌙' : '☀️'}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.profileBtn}
+            onPress={onProfilePress}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.profileIconText}>👤</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -152,6 +162,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   themeToggleText: {
+    fontSize: 12,
+  },
+  profileBtn: {
+    backgroundColor: colors.bgCard,
+    borderColor: colors.borderSubtle,
+    borderWidth: 1,
+    borderRadius: radiuses.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileIconText: {
     fontSize: 12,
   },
   syncStatusText: {

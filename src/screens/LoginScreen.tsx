@@ -71,7 +71,7 @@ export const LoginScreen: React.FC<Props> = ({ onLoginSuccess, onSkipOffline }) 
             Laya <Text style={styles.brandNative}>లయ</Text>
           </Text>
           <Text style={styles.subtitle}>Natural Cadence & Rhythm Engine</Text>
-          <Text style={styles.domainNotice}>Official OTP from laya@kolimi.dev</Text>
+          <Text style={styles.domainNotice}>Official OTP from auth@kolimi.dev</Text>
         </View>
 
         {step === 'email' ? (

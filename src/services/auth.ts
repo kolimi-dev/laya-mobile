@@ -4,8 +4,10 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CONFIG } from '../config';
 
 const SESSION_KEY = '@laya:auth_session';
+const PROFILE_KEY = '@laya:user_profile';
 
 export interface AuthSession {
   userId: string;
@@ -13,7 +15,12 @@ export interface AuthSession {
   accessToken: string;
 }
 
-export const DEFAULT_BACKEND_URL = 'http://10.0.2.2:4001'; // Android emulator localhost or public HTTPS
+export interface UserProfile {
+  name: string;
+  phone: string;
+}
+
+export const DEFAULT_BACKEND_URL = CONFIG.BACKEND_URL;
 
 export class AuthService {
   public static async getStoredSession(): Promise<AuthSession | null> {
@@ -22,6 +29,23 @@ export class AuthService {
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
+    }
+  }
+
+  public static async getStoredProfile(): Promise<UserProfile> {
+    try {
+      const raw = await AsyncStorage.getItem(PROFILE_KEY);
+      return raw ? JSON.parse(raw) : { name: '', phone: '' };
+    } catch {
+      return { name: '', phone: '' };
+    }
+  }
+
+  public static async saveProfile(profile: UserProfile): Promise<void> {
+    try {
+      await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    } catch {
+      // ignore
     }
   }
 

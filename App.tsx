@@ -24,6 +24,7 @@ import { HeaderBar } from './src/components/HeaderBar';
 import { GroupFilterPills } from './src/components/GroupFilterPills';
 import { CreateTaskModal } from './src/components/CreateTaskModal';
 import { ConsentModal } from './src/components/ConsentModal';
+import { ProfileModal } from './src/components/ProfileModal';
 import { TodayTasksScreen } from './src/screens/TodayTasksScreen';
 import { TaskChartsScreen } from './src/screens/TaskChartsScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
@@ -33,6 +34,7 @@ type ActiveView = 'tasks' | 'charts';
 function MainApp() {
   const [activeView, setActiveView] = useState<ActiveView>('tasks');
   const [modalVisible, setModalVisible] = useState(false);
+  const [profileVisible, setProfileVisible] = useState(false);
   const [consentAgreed, setConsentAgreed] = useState(true);
   const { theme } = useTheme();
 
@@ -106,6 +108,7 @@ function MainApp() {
         opInfo={opInfo}
         consistencyScore={consistencyScore}
         isOnline={isOnline}
+        onProfilePress={() => setProfileVisible(true)}
       />
 
       {/* Navigation Switcher: Today's Tasks vs Task Charts */}
@@ -180,6 +183,17 @@ function MainApp() {
       <ConsentModal
         visible={!consentAgreed}
         onAgree={handleAgreeConsent}
+      />
+
+      {/* User Profile & Connected Identifiers */}
+      <ProfileModal
+        visible={profileVisible}
+        session={session}
+        onClose={() => setProfileVisible(false)}
+        onLogout={() => {
+          setSession(null);
+          setIsAuthSkipped(false);
+        }}
       />
     </SafeAreaView>
   );
