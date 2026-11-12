@@ -1,25 +1,24 @@
 /**
  * Laya (లయ) Mobile — Network & Offline Sync Service (ADR-0003, ADR-0008)
- * Reconciles local AsyncStorage events with backend Fastify engine
+ * Reconciles user-scoped AsyncStorage events with backend Fastify engine
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../core/logger';
 import { Task, CompletionEvent, UserGroup } from '../core/types';
+import { StorageService } from './storage';
 
 export interface SyncResult {
   isOnline: boolean;
   syncedEvents: number;
   telemetrySent: boolean;
   message: string;
+  updatedData?: {
+    groups?: UserGroup[];
+    tasks?: Task[];
+    events?: CompletionEvent[];
+  };
 }
-
-const KEYS = {
-  TASKS: '@laya:tasks',
-  EVENTS: '@laya:events',
-  GROUPS: '@laya:groups',
-  LAST_SYNC: '@laya:last_sync_timestamp',
-};
 
 export class SyncService {
   /**
@@ -56,11 +55,13 @@ export class SyncService {
     }
 
     try {
+      const keys = StorageService.getKeys(userId);
+
       // 1. Gather local data
       const [groupsRaw, tasksRaw, eventsRaw] = await Promise.all([
-        AsyncStorage.getItem(KEYS.GROUPS),
-        AsyncStorage.getItem(KEYS.TASKS),
-        AsyncStorage.getItem(KEYS.EVENTS),
+        AsyncStorage.getItem(keys.GROUPS),
+        AsyncStorage.getItem(keys.TASKS),
+        AsyncStorage.getItem(keys.EVENTS),
       ]);
 
       const groups: UserGroup[] = groupsRaw ? JSON.parse(groupsRaw) : [];
@@ -108,17 +109,55 @@ export class SyncService {
         }),
       });
 
-      // 4. Flush telemetry buffer
+      // 4. Fetch the authoritative server dataset to pull updates from web/other devices
+      let updatedData;
+      if (importRes.ok) {
+        try {
+          const exportRes = await fetch(`${backendUrl}/api/v1/data/export`, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${userId}`,
+            },
+          });
+
+          if (exportRes.ok) {
+            const json = await exportRes.json();
+            const serverData = json.data;
+            if (serverData?.tasks && serverData.tasks.length > 0) {
+              const pulledTasks: Task[] = serverData.tasks.map((t: any) => ({
+                id: t.id,
+                userId: t.userId,
+                groupId: t.groupId,
+                title: t.title,
+                flavor: t.taskType || 'checklist',
+                frequency: t.recurrence || 'daily',
+                targetAmount: t.targetValue,
+                unit: t.unit,
+                sortOrder: t.sortOrder,
+                createdAt: t.createdAt,
+                updatedAt: t.updatedAt,
+              }));
+              await AsyncStorage.setItem(keys.TASKS, JSON.stringify(pulledTasks));
+              updatedData = { tasks: pulledTasks };
+            }
+          }
+        } catch {
+          // Soft failure on export fetch; local remains intact
+        }
+      }
+
+      // 5. Flush telemetry buffer
       const telemetrySent = await logger.flush(backendUrl);
 
       if (importRes.ok) {
-        await AsyncStorage.setItem(KEYS.LAST_SYNC, new Date().toISOString());
+        await AsyncStorage.setItem(`@laya:${userId}:last_sync`, new Date().toISOString());
         logger.log('action', 'sync_success', { syncedEvents: events.length });
         return {
           isOnline: true,
           syncedEvents: events.length,
           telemetrySent,
           message: `Synced ${events.length} events successfully.`,
+          updatedData,
         };
       }
 

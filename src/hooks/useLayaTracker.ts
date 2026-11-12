@@ -1,18 +1,18 @@
 /**
- * Laya (లయ) Mobile — Tracker State & Event Hook
+ * Laya (లయ) Mobile — Tracker State & Business Logic Hook
  * Manages Habits, Recurrence, Idempotent Events, Pinned Charts & Background Sync
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { CONFIG } from '../config';
+import { logger } from '../core/logger';
 import { Task, CompletionEvent, UserGroup, PinnedChart, EvaluatedTask } from '../core/types';
 import { calculateConsistencyRating, evaluateTaskProgress } from '../core/math';
 import { getOperationalDate, isTaskScheduledForDate, filterEventsForTaskCadence } from '../core/recurrence';
+import { getChartRecommendations, createPinnedChartFromRecommendation, ChartRecommendation } from '../services/ai-suggestions';
 import { StorageService, generateUUID } from '../services/storage';
 import { SyncService } from '../services/sync';
-import { CONFIG } from '../config';
-import { logger } from '../core/logger';
 import { AuthService, AuthSession } from '../services/auth';
-import { getChartRecommendations, createPinnedChartFromRecommendation, ChartRecommendation } from '../services/ai-suggestions';
 
 export function useLayaTracker() {
   const [loading, setLoading] = useState(true);
@@ -34,6 +34,7 @@ export function useLayaTracker() {
     setIsSyncing(true);
     const res = await SyncService.syncWithBackend(CONFIG.BACKEND_URL, activeUserId);
     setIsOnline(res.isOnline);
+    if (res.updatedData?.tasks) setTasks(res.updatedData.tasks);
     setIsSyncing(false);
   }, [activeUserId]);
 
@@ -41,16 +42,29 @@ export function useLayaTracker() {
     async function init() {
       const storedSession = await AuthService.getStoredSession();
       if (storedSession) setSession(storedSession);
-      const data = await StorageService.loadInitialData(storedSession?.userId || 'usr_guest');
+      const uid = storedSession?.userId || 'usr_guest';
+      const data = await StorageService.loadInitialData(uid);
       setGroups(data.groups);
       setTasks(data.tasks);
       setEvents(data.events);
       setPinnedCharts(data.pinnedCharts);
-      await logger.init(storedSession?.userId || 'usr_guest');
+      await logger.init(uid);
       setLoading(false);
     }
     init();
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      StorageService.loadInitialData(activeUserId).then((data) => {
+        setGroups(data.groups);
+        setTasks(data.tasks);
+        setEvents(data.events);
+        setPinnedCharts(data.pinnedCharts);
+        triggerSync();
+      });
+    }
+  }, [activeUserId]);
 
   useEffect(() => {
     if (!loading) {
@@ -79,15 +93,11 @@ export function useLayaTracker() {
     return calculateConsistencyRating(completed, scheduled, ignored);
   }, [evaluatedTasks]);
 
-  const chartRecommendations = useMemo(
-    () => getChartRecommendations(tasks, pinnedCharts),
-    [tasks, pinnedCharts]
-  );
+  const chartRecommendations = useMemo(() => getChartRecommendations(tasks, pinnedCharts), [tasks, pinnedCharts]);
 
   const handleToggleComplete = async (taskId: string) => {
     const existing = evaluatedTasks.find((e) => e.task.id === taskId);
     const nextStatus = existing?.isCompleted ? 'in_progress' : 'completed';
-
     const newEvent: CompletionEvent = {
       id: generateUUID('evt'),
       taskId,
@@ -96,8 +106,7 @@ export function useLayaTracker() {
       percentage: nextStatus === 'completed' ? 100 : 0,
       occurredAt: new Date().toISOString(),
     };
-
-    const updated = await StorageService.appendEvent(newEvent);
+    const updated = await StorageService.appendEvent(newEvent, activeUserId);
     setEvents([...updated]);
     logger.log('action', 'toggle_complete', { taskId, status: nextStatus });
   };
@@ -108,7 +117,6 @@ export function useLayaTracker() {
     const nextMilestones = current.includes(milestoneId)
       ? current.filter((m) => m !== milestoneId)
       : [...current, milestoneId];
-
     const newEvent: CompletionEvent = {
       id: generateUUID('evt'),
       taskId,
@@ -117,17 +125,14 @@ export function useLayaTracker() {
       completedMilestones: nextMilestones,
       occurredAt: new Date().toISOString(),
     };
-
-    const updated = await StorageService.appendEvent(newEvent);
+    const updated = await StorageService.appendEvent(newEvent, activeUserId);
     setEvents([...updated]);
     logger.log('action', 'toggle_milestone', { taskId, milestoneId });
   };
 
   const handleUpdateQuantified = async (taskId: string, delta: number) => {
     const existing = evaluatedTasks.find((e) => e.task.id === taskId);
-    const current = existing?.quantifiedValue || 0;
-    const nextVal = Math.max(0, current + delta);
-
+    const nextVal = Math.max(0, (existing?.quantifiedValue || 0) + delta);
     const newEvent: CompletionEvent = {
       id: generateUUID('evt'),
       taskId,
@@ -136,8 +141,7 @@ export function useLayaTracker() {
       quantifiedValue: nextVal,
       occurredAt: new Date().toISOString(),
     };
-
-    const updated = await StorageService.appendEvent(newEvent);
+    const updated = await StorageService.appendEvent(newEvent, activeUserId);
     setEvents([...updated]);
     logger.log('action', 'update_quantified', { taskId, delta, nextVal });
   };
@@ -145,7 +149,6 @@ export function useLayaTracker() {
   const handleToggleIgnore = async (taskId: string) => {
     const existing = evaluatedTasks.find((e) => e.task.id === taskId);
     const nextStatus = existing?.isIgnored ? 'in_progress' : 'ignored';
-
     const newEvent: CompletionEvent = {
       id: generateUUID('evt'),
       taskId,
@@ -153,8 +156,7 @@ export function useLayaTracker() {
       status: nextStatus,
       occurredAt: new Date().toISOString(),
     };
-
-    const updated = await StorageService.appendEvent(newEvent);
+    const updated = await StorageService.appendEvent(newEvent, activeUserId);
     setEvents([...updated]);
     logger.log('action', 'toggle_ignore', { taskId, status: nextStatus });
   };
@@ -163,39 +165,34 @@ export function useLayaTracker() {
     const newChart = createPinnedChartFromRecommendation(rec, pinnedCharts);
     const nextList = [...pinnedCharts, newChart];
     setPinnedCharts(nextList);
-    await StorageService.savePinnedCharts(nextList);
-    logger.log('action', 'pin_chart', { taskId: rec.taskId, type: rec.recommendedType });
+    await StorageService.savePinnedCharts(nextList, activeUserId);
   };
 
   const handleMoveChart = async (chartId: string, direction: 'up' | 'down') => {
-    const index = pinnedCharts.findIndex((c) => c.id === chartId);
-    if (index < 0) return;
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= pinnedCharts.length) return;
-
+    const idx = pinnedCharts.findIndex((c) => c.id === chartId);
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (idx < 0 || targetIdx < 0 || targetIdx >= pinnedCharts.length) return;
     const list = [...pinnedCharts];
-    [list[index], list[targetIndex]] = [list[targetIndex], list[index]];
+    [list[idx], list[targetIdx]] = [list[targetIdx], list[idx]];
     setPinnedCharts(list);
-    await StorageService.savePinnedCharts(list);
+    await StorageService.savePinnedCharts(list, activeUserId);
   };
 
   const handleRemoveChart = async (chartId: string) => {
     const list = pinnedCharts.filter((c) => c.id !== chartId);
     setPinnedCharts(list);
-    await StorageService.savePinnedCharts(list);
+    await StorageService.savePinnedCharts(list, activeUserId);
   };
 
   const handleSaveNewTask = async (task: Task) => {
-    await StorageService.saveTask(task);
+    await StorageService.saveTask(task, activeUserId);
     const exists = tasks.some((t) => t.id === task.id);
     setTasks(exists ? tasks.map((t) => (t.id === task.id ? task : t)) : [...tasks, task]);
-    logger.log('action', exists ? 'update_task' : 'create_task', { taskId: task.id, title: task.title });
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    await StorageService.deleteTask(taskId);
+    await StorageService.deleteTask(taskId, activeUserId);
     setTasks(tasks.filter((t) => t.id !== taskId));
-    logger.log('action', 'delete_task', { taskId });
   };
 
   const handleLogout = async () => {

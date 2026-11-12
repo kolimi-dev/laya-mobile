@@ -19,6 +19,7 @@ import { GroupFilterPills } from './src/components/GroupFilterPills';
 import { CreateTaskModal } from './src/components/CreateTaskModal';
 import { ConsentModal } from './src/components/ConsentModal';
 import { ProfileModal } from './src/components/ProfileModal';
+import { GuideModal } from './src/components/GuideModal';
 import { TodayTasksScreen } from './src/screens/TodayTasksScreen';
 import { TaskChartsScreen } from './src/screens/TaskChartsScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
@@ -30,12 +31,16 @@ function MainApp() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [profileVisible, setProfileVisible] = useState(false);
+  const [guideVisible, setGuideVisible] = useState(false);
   const [consentAgreed, setConsentAgreed] = useState(true);
   const { theme } = useTheme();
 
   useEffect(() => {
     AsyncStorage.getItem('@laya:consent_agreed').then((val) => {
       if (!val) setConsentAgreed(false);
+    });
+    AsyncStorage.getItem('@laya:guide_seen').then((seen) => {
+      if (!seen) setGuideVisible(true);
     });
   }, []);
 
@@ -73,6 +78,7 @@ function MainApp() {
     handleRemoveChart,
     handleSaveNewTask,
     handleDeleteTask,
+    handleLogout,
   } = useLayaTracker();
 
   if (loading) {
@@ -83,7 +89,6 @@ function MainApp() {
     );
   }
 
-  // If not logged in and didn't skip, show LoginScreen
   if (!session && !isAuthSkipped) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -97,11 +102,17 @@ function MainApp() {
     );
   }
 
+  const confirmDelete = (taskId: string, title: string) => {
+    Alert.alert('Delete Habit', `Are you sure you want to delete "${title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => handleDeleteTask(taskId) },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
 
-      {/* Header Bar */}
       <HeaderBar
         opInfo={opInfo}
         consistencyScore={consistencyScore}
@@ -109,9 +120,9 @@ function MainApp() {
         isSyncing={isSyncing}
         onSyncPress={triggerSync}
         onProfilePress={() => setProfileVisible(true)}
+        onGuidePress={() => setGuideVisible(true)}
       />
 
-      {/* Navigation Switcher: Today's Tasks vs Task Charts */}
       <View style={styles.viewSwitchBar}>
         <View style={styles.segmentedControl}>
           <TouchableOpacity
@@ -143,7 +154,6 @@ function MainApp() {
         </TouchableOpacity>
       </View>
 
-      {/* Group Filter Bar */}
       {activeView === 'tasks' && (
         <GroupFilterPills
           groups={groups}
@@ -152,7 +162,6 @@ function MainApp() {
         />
       )}
 
-      {/* Main Body */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {activeView === 'tasks' ? (
           <TodayTasksScreen
@@ -167,16 +176,7 @@ function MainApp() {
               setEditingTask(task);
               setModalVisible(true);
             }}
-            onDeleteTask={(taskId, taskTitle) => {
-              Alert.alert(
-                'Delete Habit',
-                `Are you sure you want to delete "${taskTitle}"?`,
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Delete', style: 'destructive', onPress: () => handleDeleteTask(taskId) },
-                ]
-              );
-            }}
+            onDeleteTask={confirmDelete}
           />
         ) : (
           <TaskChartsScreen
@@ -191,7 +191,6 @@ function MainApp() {
         )}
       </ScrollView>
 
-      {/* Create / Edit Task Modal */}
       <CreateTaskModal
         visible={modalVisible}
         groups={groups}
@@ -206,21 +205,22 @@ function MainApp() {
         }}
       />
 
-      {/* First-visit Privacy & Ethics Consent */}
+      <GuideModal
+        visible={guideVisible}
+        onClose={() => setGuideVisible(false)}
+      />
+
       <ConsentModal
         visible={!consentAgreed}
         onAgree={handleAgreeConsent}
       />
 
-      {/* User Profile & Connected Identifiers */}
       <ProfileModal
         visible={profileVisible}
         session={session}
         onClose={() => setProfileVisible(false)}
-        onLogout={() => {
-          setSession(null);
-          setIsAuthSkipped(false);
-        }}
+        onOpenGuide={() => setGuideVisible(true)}
+        onLogout={handleLogout}
       />
     </SafeAreaView>
   );

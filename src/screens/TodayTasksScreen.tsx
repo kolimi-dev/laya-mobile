@@ -42,8 +42,14 @@ export const TodayTasksScreen: React.FC<Props> = ({
 
       {remainingTasks.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>All done for today!</Text>
-          <Text style={styles.emptySubtext}>Zero pressure. Rest peacefully.</Text>
+          <Text style={styles.emptyTitle}>
+            {completedOrRestedTasks.length === 0 ? 'No habits yet' : 'All done for today!'}
+          </Text>
+          <Text style={styles.emptySubtext}>
+            {completedOrRestedTasks.length === 0
+              ? 'Tap "+ Add" above to start your daily rhythm, or tap 📖 for the guide.'
+              : 'Zero pressure. Rest peacefully.'}
+          </Text>
         </View>
       ) : (
         remainingTasks.map((item) => (
