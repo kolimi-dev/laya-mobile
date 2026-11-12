@@ -21,6 +21,7 @@ interface Props {
   session: AuthSession | null;
   onClose: () => void;
   onLogout: () => void;
+  onOpenGuide?: () => void;
 }
 
 export const ProfileModal: React.FC<Props> = ({
@@ -28,6 +29,7 @@ export const ProfileModal: React.FC<Props> = ({
   session,
   onClose,
   onLogout,
+  onOpenGuide,
 }) => {
   const { colors } = useTheme();
   const [name, setName] = useState('');
@@ -155,6 +157,25 @@ export const ProfileModal: React.FC<Props> = ({
                   <Text style={[styles.linkPillText, { color: colors.textTertiary }]}>Link</Text>
                 </View>
               </View>
+            </View>
+
+            {/* Guide & Tour Section (Universal App UX Standard) */}
+            <View style={[styles.oauthSection, { borderTopColor: colors.borderSubtle, marginTop: 12 }]}>
+              <Text style={[styles.sectionHeading, { color: colors.textTertiary }]}>Help & Onboarding</Text>
+              <TouchableOpacity
+                style={[styles.providerRow, { backgroundColor: colors.bgDark, borderColor: colors.borderSubtle }]}
+                onPress={() => {
+                  onClose();
+                  onOpenGuide?.();
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.providerIcon}>📖</Text>
+                <View style={styles.providerInfo}>
+                  <Text style={[styles.providerName, { color: colors.textPrimary }]}>App Tour & Guide</Text>
+                  <Text style={[styles.providerDesc, { color: colors.textTertiary }]}>Learn flavors, rest exemptions & night owl</Text>
+                </View>
+              </TouchableOpacity>
             </View>
 
             {statusMsg && <Text style={styles.statusSuccess}>{statusMsg}</Text>}
