@@ -12,12 +12,13 @@ import { getOperationalDate, isTaskScheduledForDate, filterEventsForTaskCadence 
 import { getChartRecommendations, createPinnedChartFromRecommendation, ChartRecommendation } from '../services/ai-suggestions';
 import { StorageService, generateUUID } from '../services/storage';
 import { SyncService } from '../services/sync';
-import { AuthService, AuthSession } from '../services/auth';
+import { AuthService, AuthSession, UserProfile } from '../services/auth';
 import { NotificationService } from '../services/notifications';
 
 export function useLayaTracker() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<AuthSession | null>(null);
+  const [profile, setProfile] = useState<UserProfile>({ name: '', phone: '' });
   const [isAuthSkipped, setIsAuthSkipped] = useState(false);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [groups, setGroups] = useState<UserGroup[]>([]);
@@ -50,6 +51,8 @@ export function useLayaTracker() {
     async function init() {
       const stored = await AuthService.getStoredSession();
       if (stored) setSession(stored);
+      const storedProfile = await AuthService.getStoredProfile();
+      setProfile(storedProfile);
       const uid = stored?.userId || 'usr_guest';
       await loadUserData(uid);
       await logger.init(uid);
@@ -207,6 +210,11 @@ export function useLayaTracker() {
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, lifecycleStatus: status, archivedAt: status === 'active' ? null : new Date().toISOString() } : t)));
   };
 
+  const handleUpdateProfile = async (p: UserProfile) => {
+    await AuthService.saveProfile(p);
+    setProfile(p);
+  };
+
   const handleLogout = async () => {
     await AuthService.logout();
     setSession(null);
@@ -214,8 +222,8 @@ export function useLayaTracker() {
   };
 
   return {
-    loading, session, setSession, isAuthSkipped, setIsAuthSkipped,
-    isOnline, isSyncing, triggerSync, opInfo,
+    loading, session, setSession, profile, setProfile, handleUpdateProfile,
+    isAuthSkipped, setIsAuthSkipped, isOnline, isSyncing, triggerSync, opInfo,
     activeGroupId, setActiveGroupId, groups, tasks, events,
     pinnedCharts, remainingTasks, completedOrRestedTasks, consistencyScore,
     chartRecommendations, handleToggleComplete, handleToggleMilestone,

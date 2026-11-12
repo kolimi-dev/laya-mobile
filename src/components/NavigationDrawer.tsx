@@ -28,6 +28,7 @@ export interface NavigationDrawerProps {
   activeView: AppView;
   onSelectView: (view: AppView) => void;
   session: AuthSession | null;
+  profileName?: string;
   isOnline: boolean;
   isSyncing: boolean;
   onSyncPress: () => void;
@@ -46,6 +47,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   activeView,
   onSelectView,
   session,
+  profileName,
   isOnline,
   isSyncing,
   onSyncPress,
@@ -96,7 +98,8 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   };
 
   const email = session?.email || 'guest@offline.local';
-  const nameInitial = session?.email ? session.email[0].toUpperCase() : 'G';
+  const displayName = profileName?.trim() || (session ? email.split('@')[0] : 'Guest (Offline)');
+  const nameInitial = displayName ? displayName[0].toUpperCase() : 'G';
   const userId = session?.userId || 'usr_guest';
 
   return (
@@ -121,7 +124,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
                 <Text style={styles.avatarText}>{nameInitial}</Text>
               </View>
               <View style={styles.userDetails}>
-                <Text style={styles.userName} numberOfLines={1}>{session ? email.split('@')[0] : 'Guest (Offline)'}</Text>
+                <Text style={styles.userName} numberOfLines={1}>{displayName}</Text>
                 <Text style={styles.userId} numberOfLines={1}>{userId}</Text>
               </View>
             </TouchableOpacity>

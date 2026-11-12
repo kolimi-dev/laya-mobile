@@ -19,6 +19,7 @@ import { GroupFilterPills } from './src/components/GroupFilterPills';
 import { CreateTaskModal } from './src/components/CreateTaskModal';
 import { ConsentModal } from './src/components/ConsentModal';
 import { ProfileModal } from './src/components/ProfileModal';
+import { OnboardingProfileModal } from './src/components/OnboardingProfileModal';
 import { GuideModal } from './src/components/GuideModal';
 import { TodayTasksScreen } from './src/screens/TodayTasksScreen';
 import { TaskChartsScreen } from './src/screens/TaskChartsScreen';
@@ -33,6 +34,7 @@ function MainApp() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [profileVisible, setProfileVisible] = useState(false);
   const [guideVisible, setGuideVisible] = useState(false);
+  const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [consentAgreed, setConsentAgreed] = useState(true);
   const { theme, colors } = useTheme();
   const styles = getStyles(colors);
@@ -59,7 +61,13 @@ function MainApp() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="light" />
-        <LoginScreen onLoginSuccess={(s) => tracker.setSession(s)} onSkipOffline={() => tracker.setIsAuthSkipped(true)} />
+        <LoginScreen
+          onLoginSuccess={(s) => {
+            tracker.setSession(s);
+            if (!tracker.profile.name) setOnboardingVisible(true);
+          }}
+          onSkipOffline={() => tracker.setIsAuthSkipped(true)}
+        />
         <ConsentModal visible={!consentAgreed} onAgree={() => { AsyncStorage.setItem('@laya:consent_agreed', 'true'); setConsentAgreed(true); }} />
       </SafeAreaView>
     );
@@ -156,6 +164,7 @@ function MainApp() {
         activeView={activeView}
         onSelectView={(v) => setActiveView(v)}
         session={tracker.session}
+        profileName={tracker.profile.name}
         isOnline={tracker.isOnline}
         isSyncing={tracker.isSyncing}
         onSyncPress={tracker.triggerSync}
@@ -175,7 +184,22 @@ function MainApp() {
         onSave={(t) => { tracker.handleSaveNewTask(t); setEditingTask(null); }}
       />
       <GuideModal visible={guideVisible} onClose={() => setGuideVisible(false)} />
-      <ProfileModal visible={profileVisible} session={tracker.session} onClose={() => setProfileVisible(false)} onOpenGuide={() => setGuideVisible(true)} onLogout={tracker.handleLogout} />
+      <ProfileModal
+        visible={profileVisible}
+        session={tracker.session}
+        onClose={() => setProfileVisible(false)}
+        onOpenGuide={() => setGuideVisible(true)}
+        onLogout={tracker.handleLogout}
+      />
+      <OnboardingProfileModal
+        visible={onboardingVisible}
+        initialEmail={tracker.session?.email}
+        onComplete={async (name, phone) => {
+          await tracker.handleUpdateProfile({ name, phone });
+          setOnboardingVisible(false);
+        }}
+        onSkip={() => setOnboardingVisible(false)}
+      />
     </SafeAreaView>
   );
 }
