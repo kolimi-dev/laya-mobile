@@ -1,10 +1,18 @@
 /**
  * Laya (లయ) Mobile — Root Application Coordinator
- * Natural Cadence, Guilt-Free Habit Engine (ADR-0001 through ADR-0008)
+ * Natural Cadence, Guilt-Free Habit Engine (ADR-0001 through ADR-0012)
  */
 
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import {
+  SafeAreaView,
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 
@@ -15,6 +23,7 @@ import { styles } from './App.styles';
 import { useLayaTracker } from './src/hooks/useLayaTracker';
 
 import { HeaderBar } from './src/components/HeaderBar';
+import { NavigationDrawer } from './src/components/NavigationDrawer';
 import { GroupFilterPills } from './src/components/GroupFilterPills';
 import { CreateTaskModal } from './src/components/CreateTaskModal';
 import { ConsentModal } from './src/components/ConsentModal';
@@ -28,6 +37,7 @@ type ActiveView = 'tasks' | 'charts';
 
 function MainApp() {
   const [activeView, setActiveView] = useState<ActiveView>('tasks');
+  const [drawerVisible, setDrawerVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [profileVisible, setProfileVisible] = useState(false);
@@ -49,39 +59,9 @@ function MainApp() {
     setConsentAgreed(true);
   };
 
-  const {
-    loading,
-    session,
-    setSession,
-    isAuthSkipped,
-    setIsAuthSkipped,
-    isOnline,
-    isSyncing,
-    triggerSync,
-    opInfo,
-    activeGroupId,
-    setActiveGroupId,
-    groups,
-    tasks,
-    events,
-    pinnedCharts,
-    remainingTasks,
-    completedOrRestedTasks,
-    consistencyScore,
-    chartRecommendations,
-    handleToggleComplete,
-    handleToggleMilestone,
-    handleUpdateQuantified,
-    handleToggleIgnore,
-    handlePinRecommendation,
-    handleMoveChart,
-    handleRemoveChart,
-    handleSaveNewTask,
-    handleDeleteTask,
-    handleLogout,
-  } = useLayaTracker();
+  const tracker = useLayaTracker();
 
-  if (loading) {
+  if (tracker.loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -89,13 +69,13 @@ function MainApp() {
     );
   }
 
-  if (!session && !isAuthSkipped) {
+  if (!tracker.session && !tracker.isAuthSkipped) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="light" />
         <LoginScreen
-          onLoginSuccess={(newSession) => setSession(newSession)}
-          onSkipOffline={() => setIsAuthSkipped(true)}
+          onLoginSuccess={(newSession) => tracker.setSession(newSession)}
+          onSkipOffline={() => tracker.setIsAuthSkipped(true)}
         />
         <ConsentModal visible={!consentAgreed} onAgree={handleAgreeConsent} />
       </SafeAreaView>
@@ -105,7 +85,7 @@ function MainApp() {
   const confirmDelete = (taskId: string, title: string) => {
     Alert.alert('Delete Habit', `Are you sure you want to delete "${title}"?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => handleDeleteTask(taskId) },
+      { text: 'Delete', style: 'destructive', onPress: () => tracker.handleDeleteTask(taskId) },
     ]);
   };
 
@@ -114,13 +94,9 @@ function MainApp() {
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
 
       <HeaderBar
-        opInfo={opInfo}
-        consistencyScore={consistencyScore}
-        isOnline={isOnline}
-        isSyncing={isSyncing}
-        onSyncPress={triggerSync}
-        onProfilePress={() => setProfileVisible(true)}
-        onGuidePress={() => setGuideVisible(true)}
+        opInfo={tracker.opInfo}
+        consistencyScore={tracker.consistencyScore}
+        onMenuPress={() => setDrawerVisible(true)}
       />
 
       <View style={styles.viewSwitchBar}>
@@ -130,7 +106,7 @@ function MainApp() {
             onPress={() => setActiveView('tasks')}
           >
             <Text style={[styles.segmentText, activeView === 'tasks' && styles.segmentTextActive]}>
-              Today's Tasks ({remainingTasks.length})
+              Today's Tasks ({tracker.remainingTasks.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -138,7 +114,7 @@ function MainApp() {
             onPress={() => setActiveView('charts')}
           >
             <Text style={[styles.segmentText, activeView === 'charts' && styles.segmentTextActive]}>
-              Task Charts ({pinnedCharts.length})
+              Task Charts ({tracker.pinnedCharts.length})
             </Text>
           </TouchableOpacity>
         </View>
@@ -156,22 +132,22 @@ function MainApp() {
 
       {activeView === 'tasks' && (
         <GroupFilterPills
-          groups={groups}
-          activeGroupId={activeGroupId}
-          onSelectGroup={setActiveGroupId}
+          groups={tracker.groups}
+          activeGroupId={tracker.activeGroupId}
+          onSelectGroup={tracker.setActiveGroupId}
         />
       )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {activeView === 'tasks' ? (
           <TodayTasksScreen
-            remainingTasks={remainingTasks}
-            completedOrRestedTasks={completedOrRestedTasks}
-            groups={groups}
-            onToggleComplete={handleToggleComplete}
-            onToggleMilestone={handleToggleMilestone}
-            onUpdateQuantified={handleUpdateQuantified}
-            onToggleIgnore={handleToggleIgnore}
+            remainingTasks={tracker.remainingTasks}
+            completedOrRestedTasks={tracker.completedOrRestedTasks}
+            groups={tracker.groups}
+            onToggleComplete={tracker.handleToggleComplete}
+            onToggleMilestone={tracker.handleToggleMilestone}
+            onUpdateQuantified={tracker.handleUpdateQuantified}
+            onToggleIgnore={tracker.handleToggleIgnore}
             onEditTask={(task) => {
               setEditingTask(task);
               setModalVisible(true);
@@ -180,27 +156,42 @@ function MainApp() {
           />
         ) : (
           <TaskChartsScreen
-            pinnedCharts={pinnedCharts}
-            tasks={tasks}
-            events={events}
-            recommendations={chartRecommendations}
-            onPinRecommendation={handlePinRecommendation}
-            onMoveChart={handleMoveChart}
-            onRemoveChart={handleRemoveChart}
+            pinnedCharts={tracker.pinnedCharts}
+            tasks={tracker.tasks}
+            events={tracker.events}
+            recommendations={tracker.chartRecommendations}
+            onPinRecommendation={tracker.handlePinRecommendation}
+            onMoveChart={tracker.handleMoveChart}
+            onRemoveChart={tracker.handleRemoveChart}
           />
         )}
       </ScrollView>
 
+      <NavigationDrawer
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
+        activeView={activeView}
+        onSelectView={(v) => setActiveView(v)}
+        session={tracker.session}
+        isOnline={tracker.isOnline}
+        isSyncing={tracker.isSyncing}
+        onSyncPress={tracker.triggerSync}
+        remainingTasksCount={tracker.remainingTasks.length}
+        pinnedChartsCount={tracker.pinnedCharts.length}
+        onOpenGuide={() => setGuideVisible(true)}
+        onOpenProfile={() => setProfileVisible(true)}
+      />
+
       <CreateTaskModal
         visible={modalVisible}
-        groups={groups}
+        groups={tracker.groups}
         initialTask={editingTask}
         onClose={() => {
           setModalVisible(false);
           setEditingTask(null);
         }}
         onSave={(task) => {
-          handleSaveNewTask(task);
+          tracker.handleSaveNewTask(task);
           setEditingTask(null);
         }}
       />
@@ -217,10 +208,10 @@ function MainApp() {
 
       <ProfileModal
         visible={profileVisible}
-        session={session}
+        session={tracker.session}
         onClose={() => setProfileVisible(false)}
         onOpenGuide={() => setGuideVisible(true)}
-        onLogout={handleLogout}
+        onLogout={tracker.handleLogout}
       />
     </SafeAreaView>
   );
