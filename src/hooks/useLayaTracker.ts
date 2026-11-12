@@ -150,6 +150,14 @@ export function useLayaTracker() {
     await StorageService.savePinnedCharts(nextList, activeUserId);
   };
 
+  const handlePinTaskChart = async (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    const chartType = task?.targetAmount ? 'volume_bars' : 'progress_trend';
+    const nextList: PinnedChart[] = [...pinnedCharts, { id: generateUUID(), taskId, chartType, sortOrder: pinnedCharts.length }];
+    setPinnedCharts(nextList);
+    await StorageService.savePinnedCharts(nextList, activeUserId);
+  };
+
   const handleMoveChart = async (chartId: string, direction: 'up' | 'down') => {
     const idx = pinnedCharts.findIndex((c) => c.id === chartId);
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
@@ -212,7 +220,7 @@ export function useLayaTracker() {
     pinnedCharts, remainingTasks, completedOrRestedTasks, consistencyScore,
     chartRecommendations, handleToggleComplete, handleToggleMilestone,
     handleSkipMilestone, handleUpdateQuantified, handleSetQuantifiedExact,
-    handleToggleIgnore, handlePinRecommendation, handleMoveChart,
+    handleToggleIgnore, handlePinRecommendation, handlePinTaskChart, handleMoveChart,
     handleRemoveChart, handleSaveNewTask, handleDeleteTask, handleRestoreTask,
     handlePurgeTask, handleEmptyTrash, handleSetLifecycleStatus, handleLogout,
   };

@@ -1,20 +1,22 @@
 /**
  * Laya (లయ) Mobile — Polymorphic Task Card Component (ADR-0001, ADR-0004, ADR-0012)
- * Supports Checklist, Milestones (AND/OR + Skip), Quantified Step Jumps & One-Time Tasks
+ * Supports Checklist, Milestones (AND/OR + Skip), Quantified Step Jumps & Weekly Dot Trail
  */
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { Task, EvaluatedTask, UserGroup } from '../core/types';
+import { Task, EvaluatedTask, UserGroup, CompletionEvent } from '../core/types';
 import { speakReminder } from '../services/voice';
 import { DirectNumberModal } from './DirectNumberModal';
 import { SkipMilestoneModal } from './SkipMilestoneModal';
+import { WeeklyDotTrail } from './WeeklyDotTrail';
 import { getStyles } from './TaskCard.styles';
 
 interface Props {
   evaluated: EvaluatedTask;
   group?: UserGroup;
+  events?: CompletionEvent[];
   onToggleComplete: (taskId: string) => void;
   onToggleMilestone: (taskId: string, milestoneId: string) => void;
   onSkipMilestone?: (taskId: string, milestoneId: string, reason?: string) => void;
@@ -28,6 +30,7 @@ interface Props {
 export const TaskCard: React.FC<Props> = ({
   evaluated,
   group,
+  events = [],
   onToggleComplete,
   onToggleMilestone,
   onSkipMilestone,
@@ -102,7 +105,10 @@ export const TaskCard: React.FC<Props> = ({
         )}
       </View>
 
-      {/* Discrete Milestones Pills (with OR logic and Skip with Reason) */}
+      {/* Inline 7-Day Dot Trail (ADR-0012, Phase 5) */}
+      <WeeklyDotTrail taskId={task.id} events={events} />
+
+      {/* Discrete Milestones Pills */}
       {task.flavor === 'milestone' && task.milestones && task.milestones.length > 0 && (
         <View style={styles.milestonesRow}>
           {task.milestones.map((m) => {
@@ -118,11 +124,8 @@ export const TaskCard: React.FC<Props> = ({
                   isMilestoneSkipped && styles.milestonePillSkipped,
                 ]}
                 onPress={() => {
-                  if (isMilestoneSkipped) {
-                    setSkipTarget({ id: m.id, label: m.label, isSkipped: true });
-                  } else {
-                    onToggleMilestone(task.id, m.id);
-                  }
+                  if (isMilestoneSkipped) setSkipTarget({ id: m.id, label: m.label, isSkipped: true });
+                  else onToggleMilestone(task.id, m.id);
                 }}
                 onLongPress={() => setSkipTarget({ id: m.id, label: m.label, isSkipped: isMilestoneSkipped })}
                 delayLongPress={350}
@@ -141,7 +144,7 @@ export const TaskCard: React.FC<Props> = ({
         </View>
       )}
 
-      {/* Quantified Target Controls with Step Jump & Tap-to-Type */}
+      {/* Quantified Target Controls */}
       {isQuantifiedFlavor && (
         <View style={styles.quantifiedRow}>
           <TouchableOpacity onPress={() => setDirectNumberOpen(true)} activeOpacity={0.7}>
@@ -160,7 +163,7 @@ export const TaskCard: React.FC<Props> = ({
         </View>
       )}
 
-      {/* Footer Actions: Guilt-Free Rest, Voice, Edit, Delete */}
+      {/* Footer Actions */}
       <View style={styles.footerRow}>
         <TouchableOpacity
           style={[styles.ignoreBtn, isIgnored && styles.ignoreBtnActive]}
@@ -191,7 +194,6 @@ export const TaskCard: React.FC<Props> = ({
         <Text style={styles.progressText}>{percentage}%</Text>
       </View>
 
-      {/* Direct Numeric Input Modal */}
       <DirectNumberModal
         visible={directNumberOpen}
         title={task.title}
@@ -202,7 +204,6 @@ export const TaskCard: React.FC<Props> = ({
         onSave={(val) => onSetQuantifiedExact?.(task.id, val)}
       />
 
-      {/* Skip Milestone Exemption Modal */}
       {skipTarget && (
         <SkipMilestoneModal
           visible={!!skipTarget}

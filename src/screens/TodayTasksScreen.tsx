@@ -7,13 +7,14 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
-import { EvaluatedTask, UserGroup, Task } from '../core/types';
+import { EvaluatedTask, UserGroup, Task, CompletionEvent } from '../core/types';
 import { TaskCard } from '../components/TaskCard';
 
 interface Props {
   remainingTasks: EvaluatedTask[];
   completedOrRestedTasks: EvaluatedTask[];
   groups: UserGroup[];
+  events?: CompletionEvent[];
   onToggleComplete: (taskId: string) => void;
   onToggleMilestone: (taskId: string, milestoneId: string) => void;
   onSkipMilestone?: (taskId: string, milestoneId: string, reason?: string) => void;
@@ -28,6 +29,7 @@ export const TodayTasksScreen: React.FC<Props> = ({
   remainingTasks,
   completedOrRestedTasks,
   groups,
+  events = [],
   onToggleComplete,
   onToggleMilestone,
   onSkipMilestone,
@@ -45,6 +47,7 @@ export const TodayTasksScreen: React.FC<Props> = ({
       key={item.task.id}
       evaluated={item}
       group={groups.find((g) => g.id === item.task.groupId)}
+      events={events}
       onToggleComplete={onToggleComplete}
       onToggleMilestone={onToggleMilestone}
       onSkipMilestone={onSkipMilestone}

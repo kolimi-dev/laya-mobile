@@ -108,6 +108,7 @@ function MainApp() {
             remainingTasks={tracker.remainingTasks}
             completedOrRestedTasks={tracker.completedOrRestedTasks}
             groups={tracker.groups}
+            events={tracker.events}
             onToggleComplete={tracker.handleToggleComplete}
             onToggleMilestone={tracker.handleToggleMilestone}
             onSkipMilestone={tracker.handleSkipMilestone}
@@ -123,8 +124,8 @@ function MainApp() {
             pinnedCharts={tracker.pinnedCharts}
             tasks={tracker.tasks}
             events={tracker.events}
-            recommendations={tracker.chartRecommendations}
-            onPinRecommendation={tracker.handlePinRecommendation}
+            groups={tracker.groups}
+            onPinChart={tracker.handlePinTaskChart}
             onMoveChart={tracker.handleMoveChart}
             onRemoveChart={tracker.handleRemoveChart}
           />

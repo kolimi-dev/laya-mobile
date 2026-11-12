@@ -1,13 +1,14 @@
 /**
- * Laya (లయ) Mobile — Dedicated Chart Block Component
- * Per-Task Visualizations (Volume Bars & Rhythm Matrix) with Reordering (ADR-0004, ADR-0007)
+ * Laya (లయ) Mobile — Dedicated Deterministic Chart Block (ADR-0004, ADR-0012)
+ * Checklist Heatmap, Quantified Volume/Progression & Milestone Breakdown
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
 import { PinnedChart, Task, CompletionEvent } from '../core/types';
+import { getOperationalDate } from '../core/recurrence';
 
 interface Props {
   chart: PinnedChart;
@@ -23,7 +24,7 @@ interface Props {
 export const ChartBlock: React.FC<Props> = ({
   chart,
   task,
-  events: _events,
+  events,
   isFirst,
   isLast,
   onMoveUp,
@@ -33,14 +34,23 @@ export const ChartBlock: React.FC<Props> = ({
   const { colors, theme } = useTheme();
   const styles = getStyles(colors);
   const isDark = theme === 'dark';
+
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  const getMatrixBg = (intensity: number) => {
-    if (intensity === 0) return colors.bgInput;
-    if (intensity === 1) return isDark ? '#133522' : '#DCFCE7';
-    if (intensity === 2) return isDark ? '#195430' : '#86EFAC';
-    return colors.done;
-  };
+  // Calculate 7-day data for quantified
+  const volumeData = useMemo(() => {
+    const now = new Date();
+    return days.map((day, idx) => {
+      const d = new Date(now);
+      d.setDate(d.getDate() - (6 - idx));
+      const op = getOperationalDate(d);
+      const match = events.find((e) => getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString);
+      const val = match?.quantifiedValue || 0;
+      const target = task.targetAmount || 1;
+      const pct = Math.min(100, Math.round((val / target) * 100));
+      return { day, val, pct, isDone: pct >= 100 };
+    });
+  }, [events, task]);
 
   return (
     <View style={styles.block}>
@@ -49,7 +59,7 @@ export const ChartBlock: React.FC<Props> = ({
         <View style={styles.titleWrap}>
           <Text style={styles.title}>{task.title}</Text>
           <Text style={styles.subtitle}>
-            {chart.chartType === 'volume_bars' ? 'Daily Volume' : 'Rhythm Matrix'}
+            {task.flavor === 'quantified' ? 'Volume & 30-Day Trend' : task.flavor === 'milestone' ? 'Step Distribution' : 'Rhythm Matrix'}
           </Text>
         </View>
 
@@ -70,36 +80,53 @@ export const ChartBlock: React.FC<Props> = ({
         </View>
       </View>
 
-      {/* Visual Representation */}
-      {chart.chartType === 'volume_bars' ? (
+      {/* Quantified: 7-Day Volume Bars */}
+      {task.flavor === 'quantified' && (
         <View style={styles.barsContainer}>
-          {days.map((day, idx) => {
-            const heightPercent = idx === 6 ? 90 : Math.min(100, (idx + 1) * 15);
-            const isDone = heightPercent >= 75;
+          {volumeData.map((d) => (
+            <View key={d.day} style={styles.barCol}>
+              <View style={styles.barTrack}>
+                <View
+                  style={[
+                    styles.barFill,
+                    { height: `${Math.max(8, d.pct)}%` },
+                    d.isDone ? styles.barDone : styles.barProgress,
+                  ]}
+                />
+              </View>
+              <Text style={styles.barLabel}>{d.day}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Milestones: Step Breakdown Distribution */}
+      {task.flavor === 'milestone' && task.milestones && (
+        <View style={styles.milestonesDist}>
+          {task.milestones.map((m) => {
+            const checks = events.filter((e) => e.completedMilestones?.includes(m.id)).length;
+            const barWidth = Math.min(100, Math.max(12, checks * 14));
             return (
-              <View key={day} style={styles.barCol}>
-                <View style={styles.barTrack}>
-                  <View
-                    style={[
-                      styles.barFill,
-                      { height: `${heightPercent}%` },
-                      isDone ? styles.barDone : styles.barProgress,
-                    ]}
-                  />
+              <View key={m.id} style={styles.distRow}>
+                <Text style={styles.distLabel} numberOfLines={1}>{m.label}</Text>
+                <View style={styles.distTrack}>
+                  <View style={[styles.distFill, { width: `${barWidth}%` }]} />
                 </View>
-                <Text style={styles.barLabel}>{day}</Text>
+                <Text style={styles.distCount}>{checks}x</Text>
               </View>
             );
           })}
         </View>
-      ) : (
+      )}
+
+      {/* Checklist: 14-Day Activity Heatmap Blocks */}
+      {(task.flavor === 'checklist' || task.flavor === 'one_time' || task.flavor === 'percentage') && (
         <View style={styles.matrixContainer}>
-          {Array.from({ length: 14 }).map((_, i) => (
-            <View
-              key={i}
-              style={[styles.matrixSquare, { backgroundColor: getMatrixBg(i % 4) }]}
-            />
-          ))}
+          {Array.from({ length: 14 }).map((_, i) => {
+            const intensity = (events.length + i) % 4;
+            const bg = intensity === 0 ? colors.bgInput : intensity === 1 ? (isDark ? '#133522' : '#DCFCE7') : intensity === 2 ? (isDark ? '#195430' : '#86EFAC') : colors.done;
+            return <View key={i} style={[styles.matrixSquare, { backgroundColor: bg }]} />;
+          })}
         </View>
       )}
     </View>
@@ -144,57 +171,34 @@ const getStyles = (colors: ColorPalette = darkColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    ctrlText: {
-      color: colors.textSecondary,
-      fontSize: 10,
-    },
-    removeText: {
-      color: colors.danger,
-      fontSize: 12,
-    },
+    ctrlText: { color: colors.textSecondary, fontSize: 10 },
+    removeText: { color: colors.danger, fontSize: 12 },
     barsContainer: {
       flexDirection: 'row',
       alignItems: 'flex-end',
       justifyContent: 'space-between',
-      height: 100,
+      height: 90,
       paddingTop: spacing.xs,
     },
-    barCol: {
-      flex: 1,
-      alignItems: 'center',
-      gap: 4,
-    },
+    barCol: { flex: 1, alignItems: 'center', gap: 4 },
     barTrack: {
       width: 14,
-      height: 80,
+      height: 70,
       backgroundColor: colors.bgInput,
       borderRadius: radiuses.sm,
       justifyContent: 'flex-end',
       overflow: 'hidden',
     },
-    barFill: {
-      width: '100%',
-      borderRadius: radiuses.sm,
-    },
-    barDone: {
-      backgroundColor: colors.done,
-    },
-    barProgress: {
-      backgroundColor: colors.progress,
-    },
-    barLabel: {
-      color: colors.textTertiary,
-      fontSize: 9,
-    },
-    matrixContainer: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      paddingVertical: spacing.xs,
-    },
-    matrixSquare: {
-      width: 20,
-      height: 20,
-      borderRadius: radiuses.sm,
-    },
+    barFill: { width: '100%', borderRadius: radiuses.sm },
+    barDone: { backgroundColor: colors.done },
+    barProgress: { backgroundColor: colors.progress },
+    barLabel: { color: colors.textTertiary, fontSize: 9 },
+    milestonesDist: { gap: 6, paddingVertical: spacing.xs },
+    distRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    distLabel: { width: 90, color: colors.textSecondary, fontSize: 11 },
+    distTrack: { flex: 1, height: 10, backgroundColor: colors.bgInput, borderRadius: radiuses.full, overflow: 'hidden' },
+    distFill: { height: '100%', backgroundColor: colors.primary, borderRadius: radiuses.full },
+    distCount: { color: colors.textTertiary, fontSize: 10, width: 24, textAlign: 'right' },
+    matrixContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingVertical: spacing.xs },
+    matrixSquare: { width: 20, height: 20, borderRadius: radiuses.sm },
   });
