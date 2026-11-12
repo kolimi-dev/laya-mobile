@@ -20,6 +20,7 @@ import { CreateTaskModal } from './src/components/CreateTaskModal';
 import { ConsentModal } from './src/components/ConsentModal';
 import { ProfileModal } from './src/components/ProfileModal';
 import { OnboardingProfileModal } from './src/components/OnboardingProfileModal';
+import { FeedbackModal } from './src/components/FeedbackModal';
 import { GuideModal } from './src/components/GuideModal';
 import { TodayTasksScreen } from './src/screens/TodayTasksScreen';
 import { TaskChartsScreen } from './src/screens/TaskChartsScreen';
@@ -35,6 +36,7 @@ function MainApp() {
   const [profileVisible, setProfileVisible] = useState(false);
   const [guideVisible, setGuideVisible] = useState(false);
   const [onboardingVisible, setOnboardingVisible] = useState(false);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [consentAgreed, setConsentAgreed] = useState(true);
   const { theme, colors } = useTheme();
   const styles = getStyles(colors);
@@ -174,6 +176,7 @@ function MainApp() {
         trashCount={trashCount}
         onOpenGuide={() => setGuideVisible(true)}
         onOpenProfile={() => setProfileVisible(true)}
+        onOpenFeedback={() => setFeedbackVisible(true)}
       />
 
       <CreateTaskModal
@@ -190,6 +193,11 @@ function MainApp() {
         onClose={() => setProfileVisible(false)}
         onOpenGuide={() => setGuideVisible(true)}
         onLogout={tracker.handleLogout}
+      />
+      <FeedbackModal
+        visible={feedbackVisible}
+        session={tracker.session}
+        onClose={() => setFeedbackVisible(false)}
       />
       <OnboardingProfileModal
         visible={onboardingVisible}
