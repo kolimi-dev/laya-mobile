@@ -1,6 +1,6 @@
 /**
- * Laya (లయ) Mobile — Local-First Storage Adapter
- * Pure Offline Resilience with User-Scoped AsyncStorage (ADR-0003, ADR-0005)
+ * Laya (లయ) Mobile — Local-First Storage Adapter (ADR-0003, ADR-0011)
+ * User-Scoped Storage, Lifecycle Machine & 30-Day Trash
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -36,85 +36,35 @@ export class StorageService {
     this.setUserId(userId);
     const keys = this.getKeys(userId);
 
-    let [groupsJson, tasksJson, eventsJson, chartsJson] = await Promise.all([
+    const [groupsJson, tasksJson, eventsJson, chartsJson] = await Promise.all([
       AsyncStorage.getItem(keys.GROUPS),
       AsyncStorage.getItem(keys.TASKS),
       AsyncStorage.getItem(keys.EVENTS),
       AsyncStorage.getItem(keys.PINNED_CHARTS),
     ]);
 
-    // Backward compatibility: migrate un-namespaced keys if present for guest
-    if (!tasksJson && userId === 'usr_guest') {
-      const legacyTasks = await AsyncStorage.getItem('@laya:tasks');
-      if (legacyTasks) {
-        tasksJson = legacyTasks;
-        await AsyncStorage.setItem(keys.TASKS, legacyTasks);
-      }
-    }
-
     let groups: UserGroup[] = groupsJson ? JSON.parse(groupsJson) : [];
     let tasks: Task[] = tasksJson ? JSON.parse(tasksJson) : [];
-    let events: CompletionEvent[] = eventsJson ? JSON.parse(eventsJson) : [];
-    let pinnedCharts: PinnedChart[] = chartsJson ? JSON.parse(chartsJson) : [];
+    const events: CompletionEvent[] = eventsJson ? JSON.parse(eventsJson) : [];
+    const pinnedCharts: PinnedChart[] = chartsJson ? JSON.parse(chartsJson) : [];
 
-    // Seed default groups (ADR-0005: Personal and Work)
+    // Seed default groups (ADR-0005)
     if (groups.length === 0) {
       groups = [
-        {
-          id: `grp_personal_${userId}`,
-          userId,
-          name: 'Personal',
-          color: '#94A3B8',
-          sortOrder: 1,
-          quietHoursStart: '22:00',
-          quietHoursEnd: '07:30',
-        },
-        {
-          id: `grp_work_${userId}`,
-          userId,
-          name: 'Work',
-          color: '#38BDF8',
-          sortOrder: 2,
-          quietHoursStart: '20:00',
-          quietHoursEnd: '08:30',
-        },
+        { id: `grp_personal_${userId}`, userId, name: 'Personal', color: '#94A3B8', sortOrder: 1 },
+        { id: `grp_work_${userId}`, userId, name: 'Work', color: '#38BDF8', sortOrder: 2 },
       ];
       await AsyncStorage.setItem(keys.GROUPS, JSON.stringify(groups));
     }
 
-    // Only seed sample habits for unauthenticated guests, never for authenticated users
-    if (tasks.length === 0 && userId === 'usr_guest') {
-      tasks = [
-        {
-          id: 'tsk_water',
-          userId,
-          groupId: `grp_personal_${userId}`,
-          title: 'Drink 4 L Water',
-          flavor: 'checklist',
-          frequency: 'daily',
-          targetAmount: 4,
-          unit: 'L',
-          sortOrder: 1,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'tsk_workout',
-          userId,
-          groupId: `grp_personal_${userId}`,
-          title: 'Daily Fitness Routine',
-          flavor: 'milestone',
-          frequency: 'daily',
-          milestones: [
-            { id: 'm1', label: 'Stretches', points: 1 },
-            { id: 'm2', label: 'Pushups & Squats', points: 1 },
-            { id: 'm3', label: 'Post-Workout Hydration', points: 1 },
-          ],
-          sortOrder: 2,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
+    // Auto-purge trash older than 30 days (ADR-0011)
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const purged = tasks.filter((t) => {
+      if (!t.deletedAt) return true;
+      return new Date(t.deletedAt).getTime() > thirtyDaysAgo;
+    });
+    if (purged.length !== tasks.length) {
+      tasks = purged;
       await AsyncStorage.setItem(keys.TASKS, JSON.stringify(tasks));
     }
 
@@ -126,15 +76,36 @@ export class StorageService {
     const raw = await AsyncStorage.getItem(keys.TASKS);
     const tasks: Task[] = raw ? JSON.parse(raw) : [];
     const index = tasks.findIndex((t) => t.id === task.id);
-    if (index >= 0) {
-      tasks[index] = task;
-    } else {
-      tasks.push(task);
-    }
+    if (index >= 0) tasks[index] = task;
+    else tasks.push(task);
     await AsyncStorage.setItem(keys.TASKS, JSON.stringify(tasks));
   }
 
-  public static async deleteTask(taskId: string, userId?: string): Promise<void> {
+  public static async softDeleteTask(taskId: string, userId?: string): Promise<void> {
+    const keys = this.getKeys(userId);
+    const raw = await AsyncStorage.getItem(keys.TASKS);
+    const tasks: Task[] = raw ? JSON.parse(raw) : [];
+    const target = tasks.find((t) => t.id === taskId);
+    if (target) {
+      target.deletedAt = new Date().toISOString();
+      await AsyncStorage.setItem(keys.TASKS, JSON.stringify(tasks));
+    }
+  }
+
+  public static async restoreTask(taskId: string, userId?: string): Promise<void> {
+    const keys = this.getKeys(userId);
+    const raw = await AsyncStorage.getItem(keys.TASKS);
+    const tasks: Task[] = raw ? JSON.parse(raw) : [];
+    const target = tasks.find((t) => t.id === taskId);
+    if (target) {
+      target.deletedAt = null;
+      target.archivedAt = null;
+      target.lifecycleStatus = 'active';
+      await AsyncStorage.setItem(keys.TASKS, JSON.stringify(tasks));
+    }
+  }
+
+  public static async purgeTaskPermanently(taskId: string, userId?: string): Promise<void> {
     const keys = this.getKeys(userId);
     const raw = await AsyncStorage.getItem(keys.TASKS);
     const tasks: Task[] = raw ? JSON.parse(raw) : [];
@@ -142,16 +113,37 @@ export class StorageService {
     await AsyncStorage.setItem(keys.TASKS, JSON.stringify(remaining));
   }
 
+  public static async emptyTrash(userId?: string): Promise<void> {
+    const keys = this.getKeys(userId);
+    const raw = await AsyncStorage.getItem(keys.TASKS);
+    const tasks: Task[] = raw ? JSON.parse(raw) : [];
+    const remaining = tasks.filter((t) => !t.deletedAt);
+    await AsyncStorage.setItem(keys.TASKS, JSON.stringify(remaining));
+  }
+
+  public static async updateTaskLifecycle(
+    taskId: string,
+    status: 'active' | 'completed' | 'paused' | 'retired',
+    userId?: string
+  ): Promise<void> {
+    const keys = this.getKeys(userId);
+    const raw = await AsyncStorage.getItem(keys.TASKS);
+    const tasks: Task[] = raw ? JSON.parse(raw) : [];
+    const target = tasks.find((t) => t.id === taskId);
+    if (target) {
+      target.lifecycleStatus = status;
+      target.archivedAt = status === 'active' ? null : new Date().toISOString();
+      await AsyncStorage.setItem(keys.TASKS, JSON.stringify(tasks));
+    }
+  }
+
   public static async appendEvent(event: CompletionEvent, userId?: string): Promise<CompletionEvent[]> {
     const keys = this.getKeys(userId);
     const raw = await AsyncStorage.getItem(keys.EVENTS);
     const events: CompletionEvent[] = raw ? JSON.parse(raw) : [];
     const existing = events.findIndex((e) => e.id === event.id);
-    if (existing >= 0) {
-      events[existing] = event;
-    } else {
-      events.push(event);
-    }
+    if (existing >= 0) events[existing] = event;
+    else events.push(event);
     await AsyncStorage.setItem(keys.EVENTS, JSON.stringify(events));
     return events;
   }

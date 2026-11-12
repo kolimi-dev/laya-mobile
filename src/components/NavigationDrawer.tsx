@@ -20,21 +20,23 @@ import { AuthSession } from '../services/auth';
 import { getStyles, DRAWER_WIDTH } from './NavigationDrawer.styles';
 import { DrawerNavItem } from './DrawerNavItem';
 
+export type AppView = 'tasks' | 'charts' | 'not_active' | 'trash';
+
 export interface NavigationDrawerProps {
   visible: boolean;
   onClose: () => void;
-  activeView: 'tasks' | 'charts';
-  onSelectView: (view: 'tasks' | 'charts') => void;
+  activeView: AppView;
+  onSelectView: (view: AppView) => void;
   session: AuthSession | null;
   isOnline: boolean;
   isSyncing: boolean;
   onSyncPress: () => void;
   remainingTasksCount: number;
   pinnedChartsCount: number;
+  notActiveCount?: number;
+  trashCount?: number;
   onOpenGuide: () => void;
   onOpenProfile: () => void;
-  onOpenNotActive?: () => void;
-  onOpenTrash?: () => void;
   onOpenFeedback?: () => void;
 }
 
@@ -49,10 +51,10 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   onSyncPress,
   remainingTasksCount,
   pinnedChartsCount,
+  notActiveCount,
+  trashCount,
   onOpenGuide,
   onOpenProfile,
-  onOpenNotActive,
-  onOpenTrash,
   onOpenFeedback,
 }) => {
   const { colors, theme, toggleTheme } = useTheme();
@@ -90,24 +92,6 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
         { text: 'Email Developer', onPress: () => Linking.openURL('mailto:feedback@kolimi.dev?subject=Laya%20Feedback') },
         { text: 'Close', style: 'cancel' },
       ]);
-    }
-  };
-
-  const handleNotActive = () => {
-    if (onOpenNotActive) {
-      handleClose();
-      onOpenNotActive();
-    } else {
-      Alert.alert('Not Active Habits', 'Preserves completed & paused routines with 1-tap reactivate. (Phase 4)', [{ text: 'OK' }]);
-    }
-  };
-
-  const handleTrash = () => {
-    if (onOpenTrash) {
-      handleClose();
-      onOpenTrash();
-    } else {
-      Alert.alert('Trash & Recycle Bin', 'Soft-deleted habits stay safe with a 30-day countdown and 1-tap restore. (Phase 4)', [{ text: 'OK' }]);
     }
   };
 
@@ -168,8 +152,20 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
               badge={pinnedChartsCount}
               onPress={() => { handleClose(); onSelectView('charts'); }}
             />
-            <DrawerNavItem icon="🗄️" label="Not Active Habits" onPress={handleNotActive} />
-            <DrawerNavItem icon="🗑️" label="Trash & Recycle Bin" onPress={handleTrash} />
+            <DrawerNavItem
+              icon="🗄️"
+              label="Not Active Habits"
+              isActive={activeView === 'not_active'}
+              badge={notActiveCount}
+              onPress={() => { handleClose(); onSelectView('not_active'); }}
+            />
+            <DrawerNavItem
+              icon="🗑️"
+              label="Trash & Recycle Bin"
+              isActive={activeView === 'trash'}
+              badge={trashCount}
+              onPress={() => { handleClose(); onSelectView('trash'); }}
+            />
 
             <View style={styles.divider} />
             <Text style={styles.sectionLabel}>Utilities & Preferences</Text>
