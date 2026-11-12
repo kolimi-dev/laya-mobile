@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, radiuses, typography } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
 import { PinnedChart, Task, CompletionEvent } from '../core/types';
 import { ChartRecommendation } from '../services/ai-suggestions';
 import { ChartBlock } from '../components/ChartBlock';
@@ -30,6 +31,9 @@ export const TaskChartsScreen: React.FC<Props> = ({
   onMoveChart,
   onRemoveChart,
 }) => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+
   return (
     <View style={styles.container}>
       <AiSuggestionBanner
@@ -67,27 +71,27 @@ export const TaskChartsScreen: React.FC<Props> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    paddingBottom: spacing.xxl,
-  },
-  emptyCard: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radiuses.lg,
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: 4,
-  },
-  emptyTitle: {
-    color: colors.textPrimary,
-    fontSize: typography.heading,
-    fontWeight: '600',
-  },
-  emptySubtext: {
-    color: colors.textTertiary,
-    fontSize: typography.body,
-  },
-});
-
+const getStyles = (colors: ColorPalette = darkColors) =>
+  StyleSheet.create({
+    container: {
+      paddingBottom: spacing.xxl,
+    },
+    emptyCard: {
+      backgroundColor: colors.bgCard,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: radiuses.lg,
+      padding: spacing.xl,
+      alignItems: 'center',
+      gap: 4,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: typography.heading,
+      fontWeight: '600',
+    },
+    emptySubtext: {
+      color: colors.textTertiary,
+      fontSize: typography.body,
+    },
+  });

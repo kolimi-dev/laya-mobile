@@ -12,6 +12,7 @@ export type ThemeMode = 'dark' | 'light';
 interface ThemeContextType {
   theme: ThemeMode;
   colors: ColorPalette;
+  isDark: boolean;
   toggleTheme: () => void;
 }
 
@@ -20,6 +21,7 @@ const THEME_STORAGE_KEY = '@laya:theme_mode';
 const ThemeContext = createContext<ThemeContextType>({
   theme: 'dark',
   colors: darkColors,
+  isDark: true,
   toggleTheme: () => {},
 });
 
@@ -41,7 +43,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const toggleTheme = async () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
+    const next: ThemeMode = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
     try {
       await AsyncStorage.setItem(THEME_STORAGE_KEY, next);
@@ -50,10 +52,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const activeColors = theme === 'dark' ? darkColors : lightColors;
+  const isDark = theme === 'dark';
+  const activeColors = isDark ? darkColors : lightColors;
 
   return (
-    <ThemeContext.Provider value={{ theme, colors: activeColors, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, colors: activeColors, isDark, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -62,4 +65,3 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 export function useTheme(): ThemeContextType {
   return useContext(ThemeContext);
 }
-

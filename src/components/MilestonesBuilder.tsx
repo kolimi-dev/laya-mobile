@@ -4,8 +4,9 @@
 
 import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { useTheme } from '../theme/ThemeContext';
 import { MilestoneItem } from '../core/types';
-import { colors, radiuses, spacing, typography } from '../theme/tokens';
+import { ColorPalette, darkColors, radiuses, spacing, typography } from '../theme/tokens';
 
 interface Props {
   milestones: MilestoneItem[];
@@ -13,6 +14,9 @@ interface Props {
 }
 
 export const MilestonesBuilder: React.FC<Props> = ({ milestones, onChange }) => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+
   const handleAdd = () => {
     onChange([
       ...milestones,
@@ -52,47 +56,47 @@ export const MilestonesBuilder: React.FC<Props> = ({ milestones, onChange }) => 
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    color: colors.textSecondary,
-    fontSize: typography.caption,
-    marginBottom: spacing.xs,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: colors.bgDark,
-    color: colors.textPrimary,
-    borderColor: colors.borderSubtle,
-    borderWidth: 1,
-    borderRadius: radiuses.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: typography.body,
-  },
-  delBtn: {
-    padding: spacing.sm,
-  },
-  delText: {
-    color: colors.danger,
-    fontSize: 14,
-  },
-  addBtn: {
-    marginTop: spacing.xs,
-    paddingVertical: spacing.sm,
-  },
-  addText: {
-    color: colors.primary,
-    fontSize: typography.caption,
-    fontWeight: '600',
-  },
-});
-
+const getStyles = (colors: ColorPalette = darkColors) =>
+  StyleSheet.create({
+    container: {
+      marginBottom: spacing.md,
+    },
+    label: {
+      color: colors.textSecondary,
+      fontSize: typography.caption,
+      marginBottom: spacing.xs,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.xs,
+    },
+    input: {
+      flex: 1,
+      backgroundColor: colors.bgDark,
+      color: colors.textPrimary,
+      borderColor: colors.borderSubtle,
+      borderWidth: 1,
+      borderRadius: radiuses.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      fontSize: typography.body,
+    },
+    delBtn: {
+      padding: spacing.sm,
+    },
+    delText: {
+      color: colors.danger,
+      fontSize: 14,
+    },
+    addBtn: {
+      marginTop: spacing.xs,
+      paddingVertical: spacing.sm,
+    },
+    addText: {
+      color: colors.primary,
+      fontSize: typography.caption,
+      fontWeight: '600',
+    },
+  });

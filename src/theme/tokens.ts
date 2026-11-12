@@ -9,8 +9,10 @@ export const darkColors = {
   bgCard: '#16171B',
   bgCardHover: '#1C1D22',
   bgInput: '#121316',
+  bgActive: '#27272A',
   borderSubtle: '#26272E',
   borderActive: '#363842',
+  borderStrong: '#3F3F46',
 
   // Restrained, Grounded Accents
   primary: '#38BDF8',
@@ -21,6 +23,12 @@ export const darkColors = {
   ignoredBg: '#1B1C22',
   warning: '#F59E0B',
   danger: '#EF4444',
+
+  // Badges & Highlights
+  badgeBg: '#16222F',
+  badgeBorder: '#243A4F',
+  badgeActiveBg: '#0F2E28',
+  badgeActiveBorder: '#1D584C',
 
   // Text Hierarchy
   textPrimary: '#F4F4F5',
@@ -33,13 +41,17 @@ export const darkColors = {
 };
 
 export const lightColors: typeof darkColors = {
+  // Backgrounds & Surfaces
   bgDark: '#F8FAFC',
   bgCard: '#FFFFFF',
   bgCardHover: '#F1F5F9',
   bgInput: '#F1F5F9',
+  bgActive: '#E2E8F0',
   borderSubtle: '#E2E8F0',
   borderActive: '#CBD5E1',
+  borderStrong: '#94A3B8',
 
+  // Restrained, Grounded Accents
   primary: '#0284C7',
   primaryHover: '#0369A1',
   done: '#16A34A',
@@ -49,16 +61,26 @@ export const lightColors: typeof darkColors = {
   warning: '#D97706',
   danger: '#DC2626',
 
+  // Badges & Highlights
+  badgeBg: '#E0F2FE',
+  badgeBorder: '#BAE6FD',
+  badgeActiveBg: '#DCFCE7',
+  badgeActiveBorder: '#86EFAC',
+
+  // Text Hierarchy
   textPrimary: '#0F172A',
   textSecondary: '#475569',
   textTertiary: '#64748B',
 
+  // Group Badges
   groupPersonal: '#64748B',
   groupWork: '#0284C7',
 };
 
-export const colors = darkColors;
 export type ColorPalette = typeof darkColors;
+export const colors = darkColors;
+export const getThemeColors = (mode: 'dark' | 'light'): ColorPalette =>
+  mode === 'light' ? lightColors : darkColors;
 
 export const spacing = {
   xs: 4,

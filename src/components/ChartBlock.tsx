@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, spacing, radiuses, typography } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
 import { PinnedChart, Task, CompletionEvent } from '../core/types';
 
 interface Props {
@@ -22,15 +23,24 @@ interface Props {
 export const ChartBlock: React.FC<Props> = ({
   chart,
   task,
-  events,
+  events: _events,
   isFirst,
   isLast,
   onMoveUp,
   onMoveDown,
   onRemove,
 }) => {
-  // Generate 7-day data points for preview
+  const { colors, theme } = useTheme();
+  const styles = getStyles(colors);
+  const isDark = theme === 'dark';
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  const getMatrixBg = (intensity: number) => {
+    if (intensity === 0) return colors.bgInput;
+    if (intensity === 1) return isDark ? '#133522' : '#DCFCE7';
+    if (intensity === 2) return isDark ? '#195430' : '#86EFAC';
+    return colors.done;
+  };
 
   return (
     <View style={styles.block}>
@@ -83,120 +93,108 @@ export const ChartBlock: React.FC<Props> = ({
           })}
         </View>
       ) : (
-        /* Rhythm Matrix Heatmap Blocks */
         <View style={styles.matrixContainer}>
-          {Array.from({ length: 14 }).map((_, i) => {
-            const intensity = i % 4; // 0, 1, 2, 3
-            const bg =
-              intensity === 0
-                ? '#1E1F26'
-                : intensity === 1
-                ? '#133522'
-                : intensity === 2
-                ? '#195430'
-                : colors.done;
-            return <View key={i} style={[styles.matrixSquare, { backgroundColor: bg }]} />;
-          })}
+          {Array.from({ length: 14 }).map((_, i) => (
+            <View
+              key={i}
+              style={[styles.matrixSquare, { backgroundColor: getMatrixBg(i % 4) }]}
+            />
+          ))}
         </View>
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  block: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radiuses.lg,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  titleWrap: {
-    gap: 2,
-  },
-  title: {
-    color: colors.textPrimary,
-    fontSize: typography.heading,
-    fontWeight: '600',
-  },
-  subtitle: {
-    color: colors.textTertiary,
-    fontSize: typography.caption,
-    textTransform: 'uppercase',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  ctrlBtn: {
-    backgroundColor: colors.bgInput,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radiuses.sm,
-    width: 26,
-    height: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctrlText: {
-    color: colors.textSecondary,
-    fontSize: 10,
-  },
-  removeText: {
-    color: colors.danger,
-    fontSize: 12,
-  },
-  barsContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    height: 100,
-    paddingTop: spacing.xs,
-  },
-  barCol: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  barTrack: {
-    width: 14,
-    height: 80,
-    backgroundColor: colors.bgInput,
-    borderRadius: radiuses.sm,
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-  },
-  barFill: {
-    width: '100%',
-    borderRadius: radiuses.sm,
-  },
-  barDone: {
-    backgroundColor: colors.done,
-  },
-  barProgress: {
-    backgroundColor: colors.progress,
-  },
-  barLabel: {
-    color: colors.textTertiary,
-    fontSize: 9,
-  },
-  matrixContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    paddingVertical: spacing.xs,
-  },
-  matrixSquare: {
-    width: 20,
-    height: 20,
-    borderRadius: radiuses.sm,
-  },
-});
-
+const getStyles = (colors: ColorPalette = darkColors) =>
+  StyleSheet.create({
+    block: {
+      backgroundColor: colors.bgCard,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: radiuses.lg,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      gap: spacing.sm,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    titleWrap: { gap: 2 },
+    title: {
+      color: colors.textPrimary,
+      fontSize: typography.heading,
+      fontWeight: '600',
+    },
+    subtitle: {
+      color: colors.textTertiary,
+      fontSize: typography.caption,
+      textTransform: 'uppercase',
+    },
+    actions: { flexDirection: 'row', gap: 4 },
+    ctrlBtn: {
+      backgroundColor: colors.bgInput,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: radiuses.sm,
+      width: 26,
+      height: 26,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    ctrlText: {
+      color: colors.textSecondary,
+      fontSize: 10,
+    },
+    removeText: {
+      color: colors.danger,
+      fontSize: 12,
+    },
+    barsContainer: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      height: 100,
+      paddingTop: spacing.xs,
+    },
+    barCol: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 4,
+    },
+    barTrack: {
+      width: 14,
+      height: 80,
+      backgroundColor: colors.bgInput,
+      borderRadius: radiuses.sm,
+      justifyContent: 'flex-end',
+      overflow: 'hidden',
+    },
+    barFill: {
+      width: '100%',
+      borderRadius: radiuses.sm,
+    },
+    barDone: {
+      backgroundColor: colors.done,
+    },
+    barProgress: {
+      backgroundColor: colors.progress,
+    },
+    barLabel: {
+      color: colors.textTertiary,
+      fontSize: 9,
+    },
+    matrixContainer: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      paddingVertical: spacing.xs,
+    },
+    matrixSquare: {
+      width: 20,
+      height: 20,
+      borderRadius: radiuses.sm,
+    },
+  });

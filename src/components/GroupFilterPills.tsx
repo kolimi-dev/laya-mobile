@@ -1,11 +1,12 @@
 /**
  * Laya (లయ) Mobile — Group Filter Pills
- * Minimalist Group Filter Bar (ADR-0005)
+ * Minimalist Group Filter Bar (ADR-0005, ADR-0010)
  */
 
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { colors, spacing, radiuses, typography } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
 import { UserGroup } from '../core/types';
 
 interface Props {
@@ -19,6 +20,9 @@ export const GroupFilterPills: React.FC<Props> = ({
   activeGroupId,
   onSelectGroup,
 }) => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+
   return (
     <View style={styles.wrapper}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.container}>
@@ -53,44 +57,44 @@ export const GroupFilterPills: React.FC<Props> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  wrapper: {
-    backgroundColor: colors.bgDark,
-    paddingVertical: spacing.sm,
-  },
-  container: {
-    paddingHorizontal: spacing.lg,
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radiuses.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    gap: 6,
-  },
-  activePill: {
-    backgroundColor: '#27272A',
-    borderColor: '#3F3F46',
-  },
-  colorDot: {
-    width: 6,
-    height: 6,
-    borderRadius: radiuses.full,
-  },
-  pillText: {
-    color: colors.textSecondary,
-    fontSize: typography.body,
-    fontWeight: '500',
-  },
-  activePillText: {
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-});
-
+const getStyles = (colors: ColorPalette = darkColors) =>
+  StyleSheet.create({
+    wrapper: {
+      backgroundColor: colors.bgDark,
+      paddingVertical: spacing.sm,
+    },
+    container: {
+      paddingHorizontal: spacing.lg,
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    pill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.bgCard,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: radiuses.full,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 6,
+      gap: 6,
+    },
+    activePill: {
+      backgroundColor: colors.bgActive,
+      borderColor: colors.borderStrong,
+    },
+    colorDot: {
+      width: 6,
+      height: 6,
+      borderRadius: radiuses.full,
+    },
+    pillText: {
+      color: colors.textSecondary,
+      fontSize: typography.body,
+      fontWeight: '500',
+    },
+    activePillText: {
+      color: colors.textPrimary,
+      fontWeight: '600',
+    },
+  });

@@ -12,11 +12,11 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
-import { colors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 import { Task, TaskFlavor, FrequencyType, UserGroup, MilestoneItem } from '../core/types';
 import { generateUUID } from '../services/storage';
 import { MilestonesBuilder } from './MilestonesBuilder';
-import { styles } from './CreateTaskModal.styles';
+import { getStyles } from './CreateTaskModal.styles';
 
 const FREQUENCIES: { id: FrequencyType; label: string }[] = [
   { id: 'daily', label: 'Every Day' },
@@ -40,6 +40,9 @@ export const CreateTaskModal: React.FC<Props> = ({
   onClose,
   onSave,
 }) => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+
   const [title, setTitle] = useState('');
   const [groupId, setGroupId] = useState(groups[0]?.id || 'grp_personal');
   const [flavor, setFlavor] = useState<TaskFlavor>('checklist');
@@ -109,7 +112,6 @@ export const CreateTaskModal: React.FC<Props> = ({
           </View>
 
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
-            {/* Title */}
             <View style={styles.field}>
               <Text style={styles.label}>Habit Name</Text>
               <TextInput
@@ -121,7 +123,6 @@ export const CreateTaskModal: React.FC<Props> = ({
               />
             </View>
 
-            {/* Group Selection */}
             <View style={styles.field}>
               <Text style={styles.label}>Group</Text>
               <View style={styles.pillRow}>
@@ -139,7 +140,6 @@ export const CreateTaskModal: React.FC<Props> = ({
               </View>
             </View>
 
-            {/* Flavor / Type */}
             <View style={styles.field}>
               <Text style={styles.label}>Habit Type</Text>
               <View style={styles.pillRow}>
@@ -162,7 +162,6 @@ export const CreateTaskModal: React.FC<Props> = ({
               </View>
             </View>
 
-            {/* Strict Field Isolation (ADR-0005) */}
             {flavor === 'checklist' && (
               <View style={styles.rowField}>
                 <View style={{ flex: 1 }}>
@@ -190,13 +189,9 @@ export const CreateTaskModal: React.FC<Props> = ({
             )}
 
             {flavor === 'milestone' && (
-              <MilestonesBuilder
-                milestones={milestones}
-                onChange={setMilestones}
-              />
+              <MilestonesBuilder milestones={milestones} onChange={setMilestones} />
             )}
 
-            {/* Repeat Frequency */}
             <View style={styles.field}>
               <Text style={styles.label}>Repeat Frequency</Text>
               <View style={styles.pillRow}>
@@ -215,7 +210,6 @@ export const CreateTaskModal: React.FC<Props> = ({
             </View>
           </ScrollView>
 
-          {/* Footer */}
           <View style={styles.footer}>
             <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
               <Text style={styles.cancelText}>Cancel</Text>

@@ -1,11 +1,12 @@
 /**
  * Laya (లయ) Mobile — Today's Tasks Screen
- * Remaining vs Completed & Rested Buckets (ADR-0004)
+ * Remaining vs Completed & Rested Buckets (ADR-0004, ADR-0010)
  */
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, spacing, radiuses, typography } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
+import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
 import { EvaluatedTask, UserGroup, Task } from '../core/types';
 import { TaskCard } from '../components/TaskCard';
 
@@ -32,6 +33,9 @@ export const TodayTasksScreen: React.FC<Props> = ({
   onEditTask,
   onDeleteTask,
 }) => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+
   return (
     <View style={styles.container}>
       {/* Top Bucket: Remaining Today */}
@@ -47,7 +51,7 @@ export const TodayTasksScreen: React.FC<Props> = ({
           </Text>
           <Text style={styles.emptySubtext}>
             {completedOrRestedTasks.length === 0
-              ? 'Tap "+ Add" above to start your daily rhythm, or tap 📖 for the guide.'
+              ? 'Tap "+ Add" above to start your daily rhythm, or open the menu ☰ for the guide.'
               : 'Zero pressure. Rest peacefully.'}
           </Text>
         </View>
@@ -96,49 +100,49 @@ export const TodayTasksScreen: React.FC<Props> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    paddingBottom: spacing.xxl,
-  },
-  bucketHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  bucketDot: {
-    width: 8,
-    height: 8,
-    borderRadius: radiuses.full,
-  },
-  bucketTitle: {
-    color: colors.textSecondary,
-    fontSize: typography.subheading,
-    fontWeight: '600',
-  },
-  completedSection: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderSubtle,
-  },
-  emptyCard: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radiuses.lg,
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: 4,
-  },
-  emptyTitle: {
-    color: colors.textPrimary,
-    fontSize: typography.heading,
-    fontWeight: '600',
-  },
-  emptySubtext: {
-    color: colors.textTertiary,
-    fontSize: typography.body,
-  },
-});
-
+const getStyles = (colors: ColorPalette = darkColors) =>
+  StyleSheet.create({
+    container: {
+      paddingBottom: spacing.xxl,
+    },
+    bucketHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    bucketDot: {
+      width: 8,
+      height: 8,
+      borderRadius: radiuses.full,
+    },
+    bucketTitle: {
+      color: colors.textSecondary,
+      fontSize: typography.subheading,
+      fontWeight: '600',
+    },
+    completedSection: {
+      marginTop: spacing.lg,
+      paddingTop: spacing.md,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderSubtle,
+    },
+    emptyCard: {
+      backgroundColor: colors.bgCard,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: radiuses.lg,
+      padding: spacing.xl,
+      alignItems: 'center',
+      gap: 4,
+    },
+    emptyTitle: {
+      color: colors.textPrimary,
+      fontSize: typography.heading,
+      fontWeight: '600',
+    },
+    emptySubtext: {
+      color: colors.textTertiary,
+      fontSize: typography.body,
+    },
+  });

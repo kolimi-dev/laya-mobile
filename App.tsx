@@ -16,10 +16,9 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 
-import { colors } from './src/theme/tokens';
 import { Task } from './src/core/types';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
-import { styles } from './App.styles';
+import { getStyles } from './App.styles';
 import { useLayaTracker } from './src/hooks/useLayaTracker';
 
 import { HeaderBar } from './src/components/HeaderBar';
@@ -43,7 +42,8 @@ function MainApp() {
   const [profileVisible, setProfileVisible] = useState(false);
   const [guideVisible, setGuideVisible] = useState(false);
   const [consentAgreed, setConsentAgreed] = useState(true);
-  const { theme } = useTheme();
+  const { theme, colors } = useTheme();
+  const styles = getStyles(colors);
 
   useEffect(() => {
     AsyncStorage.getItem('@laya:consent_agreed').then((val) => {

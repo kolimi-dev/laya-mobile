@@ -11,9 +11,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
-import { colors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 import { AuthService, AuthSession } from '../services/auth';
-import { styles } from './LoginScreen.styles';
+import { getStyles } from './LoginScreen.styles';
 
 interface Props {
   onLoginSuccess: (session: AuthSession) => void;
@@ -21,6 +21,9 @@ interface Props {
 }
 
 export const LoginScreen: React.FC<Props> = ({ onLoginSuccess, onSkipOffline }) => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
+
   const [step, setStep] = useState<'email' | 'otp'>('email');
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -153,4 +156,3 @@ export const LoginScreen: React.FC<Props> = ({ onLoginSuccess, onSkipOffline }) 
     </View>
   );
 };
-

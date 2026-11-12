@@ -6,7 +6,8 @@
 import React, { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { styles } from './GuideModal.styles';
+import { useTheme } from '../theme/ThemeContext';
+import { getStyles } from './GuideModal.styles';
 
 interface GuideSlide {
   icon: string;
@@ -65,6 +66,8 @@ interface Props {
 }
 
 export const GuideModal: React.FC<Props> = ({ visible, onClose }) => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const [currentIdx, setCurrentIdx] = useState(0);
 
   const slide = GUIDE_SLIDES[currentIdx];
@@ -94,7 +97,6 @@ export const GuideModal: React.FC<Props> = ({ visible, onClose }) => {
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          {/* Header indicator */}
           <View style={styles.header}>
             <Text style={styles.stepIndicator}>
               Step {currentIdx + 1} of {GUIDE_SLIDES.length}
@@ -104,7 +106,6 @@ export const GuideModal: React.FC<Props> = ({ visible, onClose }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Slide content */}
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.slideBody}>
               <View style={styles.slideIconWrap}>
@@ -127,7 +128,6 @@ export const GuideModal: React.FC<Props> = ({ visible, onClose }) => {
             </View>
           </ScrollView>
 
-          {/* Dots Indicator */}
           <View style={styles.dotsRow}>
             {GUIDE_SLIDES.map((_, i) => (
               <View
@@ -137,7 +137,6 @@ export const GuideModal: React.FC<Props> = ({ visible, onClose }) => {
             ))}
           </View>
 
-          {/* Navigation Controls */}
           <View style={styles.footer}>
             {currentIdx > 0 ? (
               <TouchableOpacity style={styles.navBtn} onPress={handlePrev}>

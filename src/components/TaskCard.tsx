@@ -5,10 +5,10 @@
 
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { colors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 import { Task, EvaluatedTask, UserGroup } from '../core/types';
 import { speakReminder } from '../services/voice';
-import { styles } from './TaskCard.styles';
+import { getStyles } from './TaskCard.styles';
 
 interface Props {
   evaluated: EvaluatedTask;
@@ -31,6 +31,8 @@ export const TaskCard: React.FC<Props> = ({
   onEditTask,
   onDeleteTask,
 }) => {
+  const { colors } = useTheme();
+  const styles = getStyles(colors);
   const { task, isCompleted, isIgnored, percentage, completedMilestones, quantifiedValue } = evaluated;
 
   const handleTestVoice = async () => {
