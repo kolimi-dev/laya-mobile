@@ -4,10 +4,11 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { colors, spacing, radiuses, typography } from '../theme/tokens';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { colors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { OperationalDateInfo } from '../core/recurrence';
+import { styles } from './HeaderBar.styles';
 
 interface Props {
   opInfo: OperationalDateInfo;
@@ -16,6 +17,7 @@ interface Props {
   isSyncing?: boolean;
   onSyncPress?: () => void;
   onProfilePress?: () => void;
+  onGuidePress?: () => void;
 }
 
 export const HeaderBar: React.FC<Props> = ({
@@ -25,6 +27,7 @@ export const HeaderBar: React.FC<Props> = ({
   isSyncing = false,
   onSyncPress,
   onProfilePress,
+  onGuidePress,
 }) => {
   const monthNames = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -35,24 +38,26 @@ export const HeaderBar: React.FC<Props> = ({
   const formattedDate = `${dayNames[opInfo.dayOfWeek]}, ${monthNames[opInfo.month]} ${opInfo.dayOfMonth}`;
   const { theme, toggleTheme } = useTheme();
 
+  const isRhythmActive = consistencyScore > 0;
+  const rhythmText = isRhythmActive ? `${consistencyScore}% Rhythm` : 'Ready today';
+
   return (
     <View style={styles.container}>
+      {/* Top Bar: Branding on Left, Mobile Action Icons on Right */}
       <View style={styles.topRow}>
         <View style={styles.brandWrap}>
-          <Text style={styles.brandTitle}>Laya </Text>
+          <Text style={styles.brandTitle}>Laya</Text>
           <Text style={styles.brandNative}>లయ</Text>
         </View>
 
-        <View style={styles.statsWrap}>
-          <View style={styles.scoreBadge}>
-            <Text style={styles.scoreText}>{consistencyScore}% Consistency</Text>
-          </View>
-
+        <View style={styles.actionsWrap}>
+          {/* 1. Sync & Network Connectivity */}
           <TouchableOpacity
-            style={styles.syncButton}
+            style={styles.actionBtn}
             onPress={onSyncPress}
             activeOpacity={0.7}
             disabled={isSyncing}
+            accessibilityLabel="Sync status"
           >
             {isSyncing ? (
               <ActivityIndicator size="small" color={colors.primary} />
@@ -64,156 +69,53 @@ export const HeaderBar: React.FC<Props> = ({
             </Text>
           </TouchableOpacity>
 
+          {/* 2. Walkthrough & Guide Button (Universal App UX Standard) */}
           <TouchableOpacity
-            style={styles.themeToggleBtn}
-            onPress={toggleTheme}
+            style={styles.actionBtn}
+            onPress={onGuidePress}
             activeOpacity={0.7}
+            accessibilityLabel="Open feature guide"
           >
-            <Text style={styles.themeToggleText}>{theme === 'dark' ? '🌙' : '☀️'}</Text>
+            <Text style={styles.actionIconText}>📖</Text>
           </TouchableOpacity>
 
+          {/* 3. Theme Toggle */}
           <TouchableOpacity
-            style={styles.profileBtn}
+            style={styles.actionBtn}
+            onPress={toggleTheme}
+            activeOpacity={0.7}
+            accessibilityLabel="Toggle dark/light theme"
+          >
+            <Text style={styles.actionIconText}>{theme === 'dark' ? '🌙' : '☀️'}</Text>
+          </TouchableOpacity>
+
+          {/* 4. Profile & Identity */}
+          <TouchableOpacity
+            style={styles.actionBtn}
             onPress={onProfilePress}
             activeOpacity={0.7}
+            accessibilityLabel="Open user profile"
           >
-            <Text style={styles.profileIconText}>👤</Text>
+            <Text style={styles.actionIconText}>👤</Text>
           </TouchableOpacity>
         </View>
       </View>
 
+      {/* Sub-row: Operational Date, Night Owl, and Guilt-Free Rhythm Badge */}
       <View style={styles.dateRow}>
-        <Text style={styles.dateText}>{formattedDate}</Text>
-        <View style={styles.nightOwlPill}>
-          <Text style={styles.nightOwlText}>Night Owl: 03:00 AM</Text>
+        <View style={styles.dateMetaWrap}>
+          <Text style={styles.dateText}>{formattedDate}</Text>
+          <View style={styles.nightOwlPill}>
+            <Text style={styles.nightOwlText}>Night Owl: 03:00 AM</Text>
+          </View>
+        </View>
+
+        <View style={[styles.scoreBadge, isRhythmActive && styles.scoreBadgeActive]}>
+          <Text style={[styles.scoreText, isRhythmActive && styles.scoreTextActive]}>
+            {rhythmText}
+          </Text>
         </View>
       </View>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.bgDark,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  brandWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  brandTitle: {
-    color: colors.textPrimary,
-    fontSize: typography.brandTitle,
-    fontWeight: '700',
-    letterSpacing: -0.5,
-  },
-  brandNative: {
-    color: colors.progress,
-    fontSize: typography.heading,
-    fontWeight: '600',
-  },
-  statsWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  scoreBadge: {
-    backgroundColor: '#16222F',
-    borderColor: '#243A4F',
-    borderWidth: 1,
-    borderRadius: radiuses.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  scoreText: {
-    color: colors.progress,
-    fontSize: typography.caption,
-    fontWeight: '600',
-  },
-  syncButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.bgCard,
-    borderColor: colors.borderSubtle,
-    borderWidth: 1,
-    borderRadius: radiuses.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    gap: 5,
-  },
-  themeToggleBtn: {
-    backgroundColor: colors.bgCard,
-    borderColor: colors.borderSubtle,
-    borderWidth: 1,
-    borderRadius: radiuses.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  themeToggleText: {
-    fontSize: 12,
-  },
-  profileBtn: {
-    backgroundColor: colors.bgCard,
-    borderColor: colors.borderSubtle,
-    borderWidth: 1,
-    borderRadius: radiuses.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileIconText: {
-    fontSize: 12,
-  },
-  syncStatusText: {
-    color: colors.textSecondary,
-    fontSize: typography.caption,
-    fontWeight: '500',
-  },
-  networkDot: {
-    width: 7,
-    height: 7,
-    borderRadius: radiuses.full,
-  },
-  onlineDot: {
-    backgroundColor: colors.done,
-  },
-  offlineDot: {
-    backgroundColor: colors.danger,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.xs,
-  },
-  dateText: {
-    color: colors.textSecondary,
-    fontSize: typography.subheading,
-    fontWeight: '500',
-  },
-  nightOwlPill: {
-    backgroundColor: colors.bgCard,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radiuses.full,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-  },
-  nightOwlText: {
-    color: colors.textTertiary,
-    fontSize: typography.caption,
-  },
-});

@@ -2,13 +2,14 @@
  * Laya (లయ) Mobile — Root App Styles
  */
 
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform, StatusBar } from 'react-native';
 import { colors, spacing, radiuses, typography } from './src/theme/tokens';
 
 export const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.bgDark,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 24) : 0,
   },
   center: {
     flex: 1,
