@@ -1,8 +1,13 @@
 /**
- * Laya (లయ) Mobile — Domain Types & Interfaces
+ * Laya (లయ) Mobile — Domain Types & Interfaces (ADR-0001 through ADR-0012)
  */
 
-export type TaskFlavor = 'milestone' | 'percentage' | 'checklist';
+export type TaskFlavor =
+  | 'checklist'
+  | 'quantified'
+  | 'milestone'
+  | 'one_time'
+  | 'percentage'; // Legacy compatibility
 
 export type FrequencyType =
   | 'daily'
@@ -14,6 +19,8 @@ export type FrequencyType =
   | 'anytime';
 
 export type EventStatus = 'completed' | 'in_progress' | 'ignored';
+
+export type MilestoneMode = 'all' | 'any';
 
 export interface MilestoneItem {
   id: string;
@@ -29,17 +36,22 @@ export interface Task {
   flavor: TaskFlavor;
   frequency: FrequencyType;
   daysOfWeek?: number[]; // 0=Sun, 1=Mon ... 6=Sat
-  dayOfMonth?: number;
+  dayOfMonth?: number;   // 1-31
   monthOfYear?: number;
   targetAmount?: number;
+  stepAmount?: number;   // Configurable jump e.g. 0.5, 250, 5, 0.1
   unit?: string;
   milestones?: MilestoneItem[];
+  milestoneMode?: MilestoneMode; // 'all' (AND) | 'any' (OR)
+  targetDate?: string;   // For 'one_time' flavor: "YYYY-MM-DD"
   sortOrder: number;
-  reminderTime?: string; // "09:00"
+  reminderTime?: string; // "08:00"
   voiceReminder?: boolean;
   createdAt: string;
   updatedAt: string;
   archivedAt?: string | null;
+  deletedAt?: string | null; // For 30-day trash (ADR-0011)
+  lifecycleStatus?: 'active' | 'completed' | 'paused' | 'retired'; // ADR-0011
 }
 
 export interface CompletionEvent {
@@ -49,6 +61,7 @@ export interface CompletionEvent {
   status: EventStatus;
   percentage?: number;
   completedMilestones?: string[]; // IDs
+  skippedMilestones?: string[];   // Guilt-free exempted milestone IDs
   quantifiedValue?: number;
   notes?: string;
   occurredAt: string; // ISO 8601 UTC
@@ -89,10 +102,10 @@ export interface EvaluatedTask {
   currentStatus: EventStatus;
   percentage: number;
   completedMilestones: string[];
+  skippedMilestones: string[];
   quantifiedValue: number;
   lastEventId?: string;
   isCompleted: boolean;
   isIgnored: boolean;
   isScheduledToday: boolean;
 }
-

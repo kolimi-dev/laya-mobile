@@ -1,5 +1,5 @@
 /**
- * Laya (లయ) Mobile — Recurrence & Operational Day Engine (ADR-0007)
+ * Laya (లయ) Mobile — Recurrence & Operational Day Engine (ADR-0007, ADR-0012)
  * Night Owl Offset (03:00 AM cutoff) and Cadence Isolation
  */
 
@@ -56,7 +56,15 @@ export function isTaskScheduledForDate(
   task: Task,
   opInfo: OperationalDateInfo
 ): boolean {
-  if (task.archivedAt) return false;
+  if (task.archivedAt || task.deletedAt) return false;
+
+  // One-time tasks are scheduled only on their target date (or today if unspecified)
+  if (task.flavor === 'one_time') {
+    if (task.targetDate) {
+      return task.targetDate === opInfo.dateString;
+    }
+    return true;
+  }
 
   switch (task.frequency) {
     case 'daily':
@@ -88,7 +96,7 @@ export function filterEventsForTaskCadence(
   events: CompletionEvent[],
   opInfo: OperationalDateInfo
 ): CompletionEvent[] {
-  if (task.frequency === 'anytime') {
+  if (task.frequency === 'anytime' || task.flavor === 'one_time') {
     return events; // Persists across dates
   }
 
@@ -105,4 +113,3 @@ export function filterEventsForTaskCadence(
     return eventOp.dateString === opInfo.dateString;
   });
 }
-

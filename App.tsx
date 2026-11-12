@@ -146,7 +146,9 @@ function MainApp() {
             groups={tracker.groups}
             onToggleComplete={tracker.handleToggleComplete}
             onToggleMilestone={tracker.handleToggleMilestone}
+            onSkipMilestone={tracker.handleSkipMilestone}
             onUpdateQuantified={tracker.handleUpdateQuantified}
+            onSetQuantifiedExact={tracker.handleSetQuantifiedExact}
             onToggleIgnore={tracker.handleToggleIgnore}
             onEditTask={(task) => {
               setEditingTask(task);

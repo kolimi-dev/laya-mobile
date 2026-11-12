@@ -1,6 +1,6 @@
 /**
- * Laya (లయ) Mobile — Tracker State & Business Logic Hook
- * Manages Habits, Recurrence, Idempotent Events, Pinned Charts & Background Sync
+ * Laya (లయ) Mobile — Tracker State & Business Logic Hook (ADR-0001 through ADR-0012)
+ * Manages Habits, Recurrence, Events, Step Jumps, Local Alarms & Offline Sync
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
@@ -13,12 +13,12 @@ import { getChartRecommendations, createPinnedChartFromRecommendation, ChartReco
 import { StorageService, generateUUID } from '../services/storage';
 import { SyncService } from '../services/sync';
 import { AuthService, AuthSession } from '../services/auth';
+import { NotificationService } from '../services/notifications';
 
 export function useLayaTracker() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<AuthSession | null>(null);
   const [isAuthSkipped, setIsAuthSkipped] = useState(false);
-
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [groups, setGroups] = useState<UserGroup[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -30,6 +30,14 @@ export function useLayaTracker() {
   const activeUserId = session?.userId || 'usr_guest';
   const opInfo = useMemo(() => getOperationalDate(), []);
 
+  const loadUserData = useCallback(async (uid: string) => {
+    const data = await StorageService.loadInitialData(uid);
+    setGroups(data.groups);
+    setTasks(data.tasks);
+    setEvents(data.events);
+    setPinnedCharts(data.pinnedCharts);
+  }, []);
+
   const triggerSync = useCallback(async () => {
     setIsSyncing(true);
     const res = await SyncService.syncWithBackend(CONFIG.BACKEND_URL, activeUserId);
@@ -40,31 +48,21 @@ export function useLayaTracker() {
 
   useEffect(() => {
     async function init() {
-      const storedSession = await AuthService.getStoredSession();
-      if (storedSession) setSession(storedSession);
-      const uid = storedSession?.userId || 'usr_guest';
-      const data = await StorageService.loadInitialData(uid);
-      setGroups(data.groups);
-      setTasks(data.tasks);
-      setEvents(data.events);
-      setPinnedCharts(data.pinnedCharts);
+      const stored = await AuthService.getStoredSession();
+      if (stored) setSession(stored);
+      const uid = stored?.userId || 'usr_guest';
+      await loadUserData(uid);
       await logger.init(uid);
       setLoading(false);
     }
     init();
-  }, []);
+  }, [loadUserData]);
 
   useEffect(() => {
     if (!loading) {
-      StorageService.loadInitialData(activeUserId).then((data) => {
-        setGroups(data.groups);
-        setTasks(data.tasks);
-        setEvents(data.events);
-        setPinnedCharts(data.pinnedCharts);
-        triggerSync();
-      });
+      loadUserData(activeUserId).then(() => triggerSync());
     }
-  }, [activeUserId]);
+  }, [activeUserId, loading, loadUserData, triggerSync]);
 
   useEffect(() => {
     if (!loading) {
@@ -76,8 +74,8 @@ export function useLayaTracker() {
 
   const evaluatedTasks = useMemo<EvaluatedTask[]>(() => {
     return tasks
-      .filter((task) => (activeGroupId ? task.groupId === activeGroupId : true) && isTaskScheduledForDate(task, opInfo))
-      .map((task) => evaluateTaskProgress(task, filterEventsForTaskCadence(task, events, opInfo)));
+      .filter((t) => (activeGroupId ? t.groupId === activeGroupId : true) && isTaskScheduledForDate(t, opInfo))
+      .map((t) => evaluateTaskProgress(t, filterEventsForTaskCadence(t, events, opInfo)));
   }, [tasks, events, activeGroupId, opInfo]);
 
   const remainingTasks = useMemo(() => evaluatedTasks.filter((t) => !t.isCompleted && !t.isIgnored), [evaluatedTasks]);
@@ -95,75 +93,89 @@ export function useLayaTracker() {
 
   const chartRecommendations = useMemo(() => getChartRecommendations(tasks, pinnedCharts), [tasks, pinnedCharts]);
 
-  const handleToggleComplete = async (taskId: string) => {
-    const existing = evaluatedTasks.find((e) => e.task.id === taskId);
-    const nextStatus = existing?.isCompleted ? 'in_progress' : 'completed';
+  const appendEvent = async (
+    eventData: Omit<CompletionEvent, 'id' | 'userId' | 'occurredAt'>,
+    action: string,
+    meta?: Record<string, unknown>
+  ) => {
     const newEvent: CompletionEvent = {
+      ...eventData,
       id: generateUUID('evt'),
-      taskId,
       userId: activeUserId,
-      status: nextStatus,
-      percentage: nextStatus === 'completed' ? 100 : 0,
       occurredAt: new Date().toISOString(),
     };
     const updated = await StorageService.appendEvent(newEvent, activeUserId);
     setEvents([...updated]);
-    logger.log('action', 'toggle_complete', { taskId, status: nextStatus });
+    logger.log('action', action, meta);
+  };
+
+  const handleToggleComplete = async (taskId: string) => {
+    const existing = evaluatedTasks.find((e) => e.task.id === taskId);
+    const nextStatus = existing?.isCompleted ? 'in_progress' : 'completed';
+    await appendEvent({
+      taskId,
+      status: nextStatus,
+      percentage: nextStatus === 'completed' ? 100 : 0,
+    }, 'toggle_complete', { taskId, status: nextStatus });
   };
 
   const handleToggleMilestone = async (taskId: string, milestoneId: string) => {
     const existing = evaluatedTasks.find((e) => e.task.id === taskId);
     const current = existing?.completedMilestones || [];
-    const nextMilestones = current.includes(milestoneId)
-      ? current.filter((m) => m !== milestoneId)
-      : [...current, milestoneId];
-    const newEvent: CompletionEvent = {
-      id: generateUUID('evt'),
+    const next = current.includes(milestoneId) ? current.filter((m) => m !== milestoneId) : [...current, milestoneId];
+    await appendEvent({
       taskId,
-      userId: activeUserId,
       status: 'in_progress',
-      completedMilestones: nextMilestones,
-      occurredAt: new Date().toISOString(),
-    };
-    const updated = await StorageService.appendEvent(newEvent, activeUserId);
-    setEvents([...updated]);
-    logger.log('action', 'toggle_milestone', { taskId, milestoneId });
+      completedMilestones: next,
+      skippedMilestones: existing?.skippedMilestones || [],
+    }, 'toggle_milestone', { taskId, milestoneId });
+  };
+
+  const handleSkipMilestone = async (taskId: string, milestoneId: string, reason?: string) => {
+    const existing = evaluatedTasks.find((e) => e.task.id === taskId);
+    const current = existing?.skippedMilestones || [];
+    const next = reason !== undefined
+      ? (current.includes(milestoneId) ? current : [...current, milestoneId])
+      : current.filter((m) => m !== milestoneId);
+    await appendEvent({
+      taskId,
+      status: 'in_progress',
+      completedMilestones: existing?.completedMilestones || [],
+      skippedMilestones: next,
+      notes: reason,
+    }, 'skip_milestone', { taskId, milestoneId, reason });
   };
 
   const handleUpdateQuantified = async (taskId: string, delta: number) => {
     const existing = evaluatedTasks.find((e) => e.task.id === taskId);
-    const nextVal = Math.max(0, (existing?.quantifiedValue || 0) + delta);
-    const newEvent: CompletionEvent = {
-      id: generateUUID('evt'),
+    const nextVal = Math.max(0, Math.round(((existing?.quantifiedValue || 0) + delta) * 100) / 100);
+    await appendEvent({
       taskId,
-      userId: activeUserId,
       status: 'in_progress',
       quantifiedValue: nextVal,
-      occurredAt: new Date().toISOString(),
-    };
-    const updated = await StorageService.appendEvent(newEvent, activeUserId);
-    setEvents([...updated]);
-    logger.log('action', 'update_quantified', { taskId, delta, nextVal });
+    }, 'update_quantified', { taskId, delta, nextVal });
+  };
+
+  const handleSetQuantifiedExact = async (taskId: string, val: number) => {
+    const nextVal = Math.max(0, Math.round(val * 100) / 100);
+    await appendEvent({
+      taskId,
+      status: 'in_progress',
+      quantifiedValue: nextVal,
+    }, 'set_quantified_exact', { taskId, val: nextVal });
   };
 
   const handleToggleIgnore = async (taskId: string) => {
     const existing = evaluatedTasks.find((e) => e.task.id === taskId);
     const nextStatus = existing?.isIgnored ? 'in_progress' : 'ignored';
-    const newEvent: CompletionEvent = {
-      id: generateUUID('evt'),
+    await appendEvent({
       taskId,
-      userId: activeUserId,
       status: nextStatus,
-      occurredAt: new Date().toISOString(),
-    };
-    const updated = await StorageService.appendEvent(newEvent, activeUserId);
-    setEvents([...updated]);
-    logger.log('action', 'toggle_ignore', { taskId, status: nextStatus });
+    }, 'toggle_ignore', { taskId, status: nextStatus });
   };
 
   const handlePinRecommendation = async (rec: ChartRecommendation) => {
-    const newChart = createPinnedChartFromRecommendation(rec, pinnedCharts);
-    const nextList = [...pinnedCharts, newChart];
+    const nextList = [...pinnedCharts, createPinnedChartFromRecommendation(rec, pinnedCharts)];
     setPinnedCharts(nextList);
     await StorageService.savePinnedCharts(nextList, activeUserId);
   };
@@ -186,12 +198,14 @@ export function useLayaTracker() {
 
   const handleSaveNewTask = async (task: Task) => {
     await StorageService.saveTask(task, activeUserId);
+    await NotificationService.scheduleTaskReminder(task);
     const exists = tasks.some((t) => t.id === task.id);
     setTasks(exists ? tasks.map((t) => (t.id === task.id ? task : t)) : [...tasks, task]);
   };
 
   const handleDeleteTask = async (taskId: string) => {
     await StorageService.deleteTask(taskId, activeUserId);
+    await NotificationService.cancelTaskReminder(taskId);
     setTasks(tasks.filter((t) => t.id !== taskId));
   };
 
@@ -202,34 +216,13 @@ export function useLayaTracker() {
   };
 
   return {
-    loading,
-    session,
-    setSession,
-    isAuthSkipped,
-    setIsAuthSkipped,
-    isOnline,
-    isSyncing,
-    triggerSync,
-    opInfo,
-    activeGroupId,
-    setActiveGroupId,
-    groups,
-    tasks,
-    events,
-    pinnedCharts,
-    remainingTasks,
-    completedOrRestedTasks,
-    consistencyScore,
-    chartRecommendations,
-    handleToggleComplete,
-    handleToggleMilestone,
-    handleUpdateQuantified,
-    handleToggleIgnore,
-    handlePinRecommendation,
-    handleMoveChart,
-    handleRemoveChart,
-    handleSaveNewTask,
-    handleDeleteTask,
-    handleLogout,
+    loading, session, setSession, isAuthSkipped, setIsAuthSkipped,
+    isOnline, isSyncing, triggerSync, opInfo,
+    activeGroupId, setActiveGroupId, groups, tasks, events,
+    pinnedCharts, remainingTasks, completedOrRestedTasks, consistencyScore,
+    chartRecommendations, handleToggleComplete, handleToggleMilestone,
+    handleSkipMilestone, handleUpdateQuantified, handleSetQuantifiedExact,
+    handleToggleIgnore, handlePinRecommendation, handleMoveChart,
+    handleRemoveChart, handleSaveNewTask, handleDeleteTask, handleLogout,
   };
 }

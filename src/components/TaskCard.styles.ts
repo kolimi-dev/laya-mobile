@@ -1,5 +1,5 @@
 /**
- * Laya (లయ) Mobile — TaskCard Component Styles (ADR-0010, ADR-0011)
+ * Laya (లయ) Mobile — TaskCard Component Styles (ADR-0010, ADR-0011, ADR-0012)
  */
 
 import { StyleSheet } from 'react-native';
@@ -26,10 +26,7 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       alignItems: 'center',
       justifyContent: 'space-between',
     },
-    titleWrap: {
-      flex: 1,
-      gap: 3,
-    },
+    titleWrap: { flex: 1, gap: 3 },
     title: {
       color: colors.textPrimary,
       fontSize: typography.heading,
@@ -39,9 +36,7 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       textDecorationLine: 'line-through',
       color: colors.textTertiary,
     },
-    ignoredText: {
-      color: colors.ignored,
-    },
+    ignoredText: { color: colors.ignored },
     badgeRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -52,19 +47,25 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       alignItems: 'center',
       gap: 4,
     },
-    groupDot: {
-      width: 6,
-      height: 6,
-      borderRadius: radiuses.full,
-    },
-    groupBadgeText: {
-      color: colors.textSecondary,
-      fontSize: typography.caption,
-    },
+    groupDot: { width: 6, height: 6, borderRadius: radiuses.full },
+    groupBadgeText: { color: colors.textSecondary, fontSize: typography.caption },
     flavorBadge: {
       color: colors.textTertiary,
       fontSize: typography.caption,
       textTransform: 'uppercase',
+    },
+    metaPill: {
+      backgroundColor: colors.bgInput,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: radiuses.full,
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+    },
+    metaPillText: {
+      color: colors.progress,
+      fontSize: 10,
+      fontWeight: '600',
     },
     checkBtn: {
       width: 28,
@@ -84,9 +85,7 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       fontSize: 14,
       fontWeight: '700',
     },
-    checkIconDone: {
-      color: '#FFFFFF',
-    },
+    checkIconDone: { color: '#FFFFFF' },
     milestonesRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -105,14 +104,19 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       backgroundColor: colors.done,
       borderColor: colors.done,
     },
+    milestonePillSkipped: {
+      backgroundColor: colors.ignoredBg,
+      borderColor: colors.borderSubtle,
+    },
     milestoneText: {
       color: colors.textSecondary,
       fontSize: typography.caption,
       fontWeight: '500',
     },
-    milestoneTextDone: {
-      color: '#FFFFFF',
-      fontWeight: '600',
+    milestoneTextDone: { color: '#FFFFFF', fontWeight: '600' },
+    milestoneTextSkipped: {
+      color: colors.ignored,
+      textDecorationLine: 'line-through',
     },
     quantifiedRow: {
       flexDirection: 'row',
@@ -128,10 +132,7 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       fontWeight: '600',
       paddingLeft: spacing.xs,
     },
-    quantifiedActions: {
-      flexDirection: 'row',
-      gap: spacing.xs,
-    },
+    quantifiedActions: { flexDirection: 'row', gap: spacing.xs },
     stepBtn: {
       backgroundColor: colors.bgCard,
       borderWidth: 1,
@@ -167,24 +168,15 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       backgroundColor: colors.bgActive,
       borderColor: colors.borderStrong,
     },
-    ignoreBtnText: {
-      color: colors.textTertiary,
-      fontSize: typography.caption,
-    },
-    ignoreBtnTextActive: {
-      color: colors.textPrimary,
-      fontWeight: '600',
-    },
+    ignoreBtnText: { color: colors.textTertiary, fontSize: typography.caption },
+    ignoreBtnTextActive: { color: colors.textPrimary, fontWeight: '600' },
     voiceBtn: {
       backgroundColor: colors.bgInput,
       borderRadius: radiuses.sm,
       paddingHorizontal: spacing.sm,
       paddingVertical: 3,
     },
-    voiceBtnText: {
-      color: colors.textSecondary,
-      fontSize: typography.caption,
-    },
+    voiceBtnText: { color: colors.textSecondary, fontSize: typography.caption },
     progressText: {
       color: colors.textTertiary,
       fontSize: typography.caption,
@@ -198,9 +190,7 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       paddingHorizontal: 6,
       paddingVertical: 3,
     },
-    cardActionText: {
-      fontSize: 12,
-    },
+    cardActionText: { fontSize: 12 },
   });
 
 export const styles = getStyles();

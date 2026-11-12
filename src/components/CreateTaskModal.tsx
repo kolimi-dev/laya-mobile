@@ -1,6 +1,6 @@
 /**
- * Laya (లయ) Mobile — Create Task Modal
- * Strict Form Field Isolation & Human Frequencies (ADR-0005)
+ * Laya (లయ) Mobile — Create Task Modal (ADR-0005, ADR-0012)
+ * 4 Distinct Flavors, Generic Step Jump, Disjunctive Milestones & Day Combinations
  */
 
 import React, { useState, useEffect } from 'react';
@@ -13,16 +13,18 @@ import {
   ScrollView,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { Task, TaskFlavor, FrequencyType, UserGroup, MilestoneItem } from '../core/types';
+import { Task, TaskFlavor, FrequencyType, UserGroup, MilestoneItem, MilestoneMode } from '../core/types';
 import { generateUUID } from '../services/storage';
 import { MilestonesBuilder } from './MilestonesBuilder';
+import { TaskFrequencyFields } from './TaskFrequencyFields';
+import { TaskQuantifiedFields } from './TaskQuantifiedFields';
 import { getStyles } from './CreateTaskModal.styles';
 
-const FREQUENCIES: { id: FrequencyType; label: string }[] = [
-  { id: 'daily', label: 'Every Day' },
-  { id: 'days_of_week', label: 'Weekdays' },
-  { id: 'monthly', label: 'Monthly' },
-  { id: 'anytime', label: 'Flexible' },
+const FLAVORS: { id: TaskFlavor; label: string }[] = [
+  { id: 'checklist', label: 'Checklist' },
+  { id: 'quantified', label: 'Quantified' },
+  { id: 'milestone', label: 'Milestones' },
+  { id: 'one_time', label: 'One-Time' },
 ];
 
 interface Props {
@@ -48,34 +50,46 @@ export const CreateTaskModal: React.FC<Props> = ({
   const [flavor, setFlavor] = useState<TaskFlavor>('checklist');
   const [frequency, setFrequency] = useState<FrequencyType>('daily');
   const [targetAmount, setTargetAmount] = useState('4');
+  const [stepAmount, setStepAmount] = useState('1');
   const [unit, setUnit] = useState('L');
-  const [milestones, setMilestones] = useState<MilestoneItem[]>([
-    { id: '1', label: 'Step 1', points: 1 },
-    { id: '2', label: 'Step 2', points: 1 },
-  ]);
+  const [milestones, setMilestones] = useState<MilestoneItem[]>([]);
+  const [milestoneMode, setMilestoneMode] = useState<MilestoneMode>('all');
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [dayOfMonth, setDayOfMonth] = useState('1');
+  const [targetDate, setTargetDate] = useState('');
+  const [reminderTime, setReminderTime] = useState('');
 
   useEffect(() => {
     if (initialTask) {
       setTitle(initialTask.title);
       setGroupId(initialTask.groupId);
-      setFlavor(initialTask.flavor);
+      setFlavor(initialTask.flavor === 'percentage' ? 'quantified' : initialTask.flavor);
       setFrequency(initialTask.frequency);
-      setTargetAmount(initialTask.targetAmount ? String(initialTask.targetAmount) : '');
+      setTargetAmount(initialTask.targetAmount ? String(initialTask.targetAmount) : '4');
+      setStepAmount(initialTask.stepAmount ? String(initialTask.stepAmount) : '1');
       setUnit(initialTask.unit || '');
       setMilestones(initialTask.milestones || []);
+      setMilestoneMode(initialTask.milestoneMode || 'all');
+      setDaysOfWeek(initialTask.daysOfWeek || [1, 2, 3, 4, 5]);
+      setDayOfMonth(initialTask.dayOfMonth ? String(initialTask.dayOfMonth) : '1');
+      setTargetDate(initialTask.targetDate || '');
+      setReminderTime(initialTask.reminderTime || '');
     } else {
       setTitle('');
       setGroupId(groups[0]?.id || 'grp_personal');
       setFlavor('checklist');
       setFrequency('daily');
       setTargetAmount('4');
+      setStepAmount('1');
       setUnit('L');
-      setMilestones([
-        { id: '1', label: 'Step 1', points: 1 },
-        { id: '2', label: 'Step 2', points: 1 },
-      ]);
+      setMilestones([]);
+      setMilestoneMode('all');
+      setDaysOfWeek([1, 2, 3, 4, 5]);
+      setDayOfMonth('1');
+      setTargetDate(new Date().toISOString().split('T')[0]);
+      setReminderTime('');
     }
-  }, [initialTask, visible]);
+  }, [initialTask, visible, groups]);
 
   const handleSubmit = () => {
     if (!title.trim()) return;
@@ -86,26 +100,31 @@ export const CreateTaskModal: React.FC<Props> = ({
       groupId,
       title: title.trim(),
       flavor,
-      frequency,
-      targetAmount: flavor === 'checklist' && targetAmount ? parseFloat(targetAmount) : undefined,
-      unit: flavor === 'checklist' ? unit : undefined,
-      milestones: flavor === 'milestone' ? milestones : undefined,
+      frequency: flavor === 'one_time' ? 'anytime' : frequency,
+      daysOfWeek: frequency === 'days_of_week' ? daysOfWeek : undefined,
+      dayOfMonth: frequency === 'monthly' ? parseInt(dayOfMonth, 10) || 1 : undefined,
+      targetDate: flavor === 'one_time' ? (targetDate.trim() || undefined) : undefined,
+      targetAmount: flavor === 'quantified' ? (parseFloat(targetAmount) || undefined) : undefined,
+      stepAmount: flavor === 'quantified' ? (parseFloat(stepAmount) || 1) : undefined,
+      unit: flavor === 'quantified' ? unit.trim() : undefined,
+      milestones: flavor === 'milestone' ? milestones.filter((m) => m.label.trim().length > 0) : undefined,
+      milestoneMode: flavor === 'milestone' ? milestoneMode : undefined,
+      reminderTime: reminderTime.trim() || undefined,
       sortOrder: initialTask?.sortOrder || Date.now(),
       createdAt: initialTask?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     onSave(taskData);
-    setTitle('');
     onClose();
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <View style={styles.header}>
-            <Text style={styles.modalTitle}>{initialTask ? 'Edit Habit' : 'Add New Habit'}</Text>
+            <Text style={styles.modalTitle}>{initialTask ? 'Edit Habit' : 'Create New Habit'}</Text>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Text style={styles.closeText}>✕</Text>
             </TouchableOpacity>
@@ -118,7 +137,7 @@ export const CreateTaskModal: React.FC<Props> = ({
                 style={styles.input}
                 value={title}
                 onChangeText={setTitle}
-                placeholder="e.g. Read Philosophy, Drink Water"
+                placeholder="e.g. Morning Water, Read 20 Pages"
                 placeholderTextColor={colors.textTertiary}
               />
             </View>
@@ -141,73 +160,66 @@ export const CreateTaskModal: React.FC<Props> = ({
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Habit Type</Text>
+              <Text style={styles.label}>Habit Flavor</Text>
               <View style={styles.pillRow}>
-                <TouchableOpacity
-                  style={[styles.selectPill, flavor === 'checklist' && styles.selectPillActive]}
-                  onPress={() => setFlavor('checklist')}
-                >
-                  <Text style={[styles.selectText, flavor === 'checklist' && styles.selectTextActive]}>
-                    Standard / Quantified
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.selectPill, flavor === 'milestone' && styles.selectPillActive]}
-                  onPress={() => setFlavor('milestone')}
-                >
-                  <Text style={[styles.selectText, flavor === 'milestone' && styles.selectTextActive]}>
-                    Milestones
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {flavor === 'checklist' && (
-              <View style={styles.rowField}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Target Amount (Optional)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={targetAmount}
-                    onChangeText={setTargetAmount}
-                    keyboardType="numeric"
-                    placeholder="e.g. 4"
-                    placeholderTextColor={colors.textTertiary}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>Unit Label</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={unit}
-                    onChangeText={setUnit}
-                    placeholder="e.g. L, pages, mins"
-                    placeholderTextColor={colors.textTertiary}
-                  />
-                </View>
-              </View>
-            )}
-
-            {flavor === 'milestone' && (
-              <MilestonesBuilder milestones={milestones} onChange={setMilestones} />
-            )}
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Repeat Frequency</Text>
-              <View style={styles.pillRow}>
-                {FREQUENCIES.map((f) => (
+                {FLAVORS.map((flv) => (
                   <TouchableOpacity
-                    key={f.id}
-                    style={[styles.selectPill, frequency === f.id && styles.selectPillActive]}
-                    onPress={() => setFrequency(f.id)}
+                    key={flv.id}
+                    style={[styles.selectPill, flavor === flv.id && styles.selectPillActive]}
+                    onPress={() => setFlavor(flv.id)}
                   >
-                    <Text style={[styles.selectText, frequency === f.id && styles.selectTextActive]}>
-                      {f.label}
+                    <Text style={[styles.selectText, flavor === flv.id && styles.selectTextActive]}>
+                      {flv.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
+
+            {flavor === 'quantified' && (
+              <TaskQuantifiedFields
+                targetAmount={targetAmount}
+                onTargetChange={setTargetAmount}
+                stepAmount={stepAmount}
+                onStepChange={setStepAmount}
+                unit={unit}
+                onUnitChange={setUnit}
+              />
+            )}
+
+            {flavor === 'milestone' && (
+              <MilestonesBuilder
+                milestones={milestones}
+                onChange={setMilestones}
+                milestoneMode={milestoneMode}
+                onModeChange={setMilestoneMode}
+              />
+            )}
+
+            {flavor === 'one_time' && (
+              <View style={styles.field}>
+                <Text style={styles.label}>Target Due Date (YYYY-MM-DD)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={targetDate}
+                  onChangeText={setTargetDate}
+                  placeholder="2026-11-15"
+                  placeholderTextColor={colors.textTertiary}
+                />
+              </View>
+            )}
+
+            <TaskFrequencyFields
+              isOneTime={flavor === 'one_time'}
+              frequency={frequency}
+              onFrequencyChange={setFrequency}
+              daysOfWeek={daysOfWeek}
+              onDaysChange={setDaysOfWeek}
+              dayOfMonth={dayOfMonth}
+              onDayOfMonthChange={setDayOfMonth}
+              reminderTime={reminderTime}
+              onReminderTimeChange={setReminderTime}
+            />
           </ScrollView>
 
           <View style={styles.footer}>
@@ -215,7 +227,7 @@ export const CreateTaskModal: React.FC<Props> = ({
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleSubmit} style={styles.submitBtn}>
-              <Text style={styles.submitText}>{initialTask ? 'Save Changes' : 'Save Habit'}</Text>
+              <Text style={styles.submitText}>{initialTask ? 'Save Changes' : 'Create Habit'}</Text>
             </TouchableOpacity>
           </View>
         </View>

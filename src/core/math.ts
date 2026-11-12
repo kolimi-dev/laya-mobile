@@ -1,6 +1,6 @@
 /**
  * Laya (లయ) Mobile — Mathematical Engine
- * Guilt-Free Consistency Math & Progress Evaluators (ADR-0001, ADR-0004)
+ * Guilt-Free Consistency Math & Progress Evaluators (ADR-0001, ADR-0004, ADR-0012)
  */
 
 import { Task, CompletionEvent, EvaluatedTask } from './types';
@@ -24,13 +24,13 @@ export function calculateConsistencyRating(
 }
 
 /**
- * Evaluates the status of a single task given its completion events
+ * Evaluates the status of a single task given its completion events (ADR-0012)
+ * Supports 4 flavors: checklist, quantified, milestone (AND/OR + skipped), one_time
  */
 export function evaluateTaskProgress(
   task: Task,
   events: CompletionEvent[]
 ): EvaluatedTask {
-  // Sort events chronologically to evaluate latest state
   const sorted = [...events].sort(
     (a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime()
   );
@@ -38,6 +38,7 @@ export function evaluateTaskProgress(
   let currentStatus: 'completed' | 'in_progress' | 'ignored' = 'in_progress';
   let percentage = 0;
   let completedMilestones: string[] = [];
+  let skippedMilestones: string[] = [];
   let quantifiedValue = 0;
   let lastEventId: string | undefined;
 
@@ -52,28 +53,42 @@ export function evaluateTaskProgress(
 
     if (task.flavor === 'milestone') {
       completedMilestones = event.completedMilestones || [];
+      skippedMilestones = event.skippedMilestones || [];
       const totalCount = task.milestones?.length || 1;
-      percentage = Math.round((completedMilestones.length / totalCount) * 100);
-      if (completedMilestones.length >= totalCount) {
-        currentStatus = 'completed';
+
+      if (task.milestoneMode === 'any') {
+        // Disjunctive OR: Tapping ANY option completes 100% (ADR-0012)
+        if (completedMilestones.length > 0) {
+          percentage = 100;
+          currentStatus = 'completed';
+        } else {
+          percentage = 0;
+        }
+      } else {
+        // Conjunctive AND: Subtract skipped milestones from denominator
+        const effectiveTotal = Math.max(1, totalCount - skippedMilestones.length);
+        percentage = Math.min(100, Math.round((completedMilestones.length / effectiveTotal) * 100));
+        if (completedMilestones.length >= effectiveTotal) {
+          currentStatus = 'completed';
+        }
       }
     } else if (task.flavor === 'percentage') {
       percentage = Math.min(100, Math.max(0, event.percentage ?? 0));
       if (percentage >= 100) {
         currentStatus = 'completed';
       }
-    } else if (task.flavor === 'checklist') {
-      if (task.targetAmount && task.targetAmount > 0) {
-        // Quantified task
-        quantifiedValue = event.quantifiedValue ?? 0;
-        percentage = Math.min(100, Math.round((quantifiedValue / task.targetAmount) * 100));
-        if (quantifiedValue >= task.targetAmount) {
-          currentStatus = 'completed';
-        }
-      } else {
-        // Standard binary checklist
-        percentage = event.status === 'completed' ? 100 : 0;
+    } else if (
+      task.flavor === 'quantified' ||
+      (task.flavor === 'checklist' && task.targetAmount && task.targetAmount > 0)
+    ) {
+      quantifiedValue = event.quantifiedValue ?? 0;
+      const target = task.targetAmount || 1;
+      percentage = Math.min(100, Math.round((quantifiedValue / target) * 100));
+      if (quantifiedValue >= target) {
+        currentStatus = 'completed';
       }
+    } else if (task.flavor === 'one_time' || task.flavor === 'checklist') {
+      percentage = event.status === 'completed' ? 100 : 0;
     }
   }
 
@@ -85,6 +100,7 @@ export function evaluateTaskProgress(
     currentStatus,
     percentage,
     completedMilestones,
+    skippedMilestones,
     quantifiedValue,
     lastEventId,
     isCompleted,
@@ -92,4 +108,3 @@ export function evaluateTaskProgress(
     isScheduledToday: true,
   };
 }
-

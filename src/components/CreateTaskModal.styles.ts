@@ -1,5 +1,5 @@
 /**
- * Laya (లయ) Mobile — CreateTaskModal Styles (ADR-0010, ADR-0011)
+ * Laya (లయ) Mobile — CreateTaskModal Styles (ADR-0010, ADR-0011, ADR-0012)
  */
 
 import { StyleSheet } from 'react-native';
@@ -18,7 +18,7 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       borderWidth: 1,
       borderColor: colors.borderSubtle,
       borderRadius: radiuses.lg,
-      maxHeight: '85%',
+      maxHeight: '90%',
       padding: spacing.md,
     },
     header: {
@@ -32,29 +32,20 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       fontSize: typography.heading,
       fontWeight: '700',
     },
-    closeBtn: {
-      padding: 4,
-    },
-    closeText: {
-      color: colors.textSecondary,
-      fontSize: 16,
-    },
-    body: {
-      gap: spacing.md,
-    },
-    field: {
-      marginBottom: spacing.md,
-      gap: 6,
-    },
-    rowField: {
-      flexDirection: 'row',
-      gap: spacing.md,
-      marginBottom: spacing.md,
-    },
+    closeBtn: { padding: 4 },
+    closeText: { color: colors.textSecondary, fontSize: 16 },
+    body: { gap: spacing.md },
+    field: { marginBottom: spacing.md, gap: 6 },
+    rowField: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
     label: {
       color: colors.textSecondary,
       fontSize: typography.body,
       fontWeight: '600',
+    },
+    helperText: {
+      color: colors.textTertiary,
+      fontSize: 11,
+      marginTop: -2,
     },
     input: {
       backgroundColor: colors.bgInput,
@@ -91,32 +82,6 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       color: colors.textPrimary,
       fontWeight: '600',
     },
-    milestoneRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.xs,
-      marginTop: 4,
-    },
-    delBtn: {
-      padding: 6,
-    },
-    delText: {
-      color: colors.danger,
-      fontSize: 14,
-    },
-    addBtn: {
-      borderWidth: 1,
-      borderColor: colors.borderSubtle,
-      borderStyle: 'dashed',
-      borderRadius: radiuses.sm,
-      padding: spacing.xs,
-      alignItems: 'center',
-      marginTop: 4,
-    },
-    addText: {
-      color: colors.progress,
-      fontSize: typography.caption,
-    },
     footer: {
       flexDirection: 'row',
       justifyContent: 'flex-end',
@@ -126,14 +91,8 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       paddingTop: spacing.sm,
       marginTop: spacing.sm,
     },
-    cancelBtn: {
-      paddingHorizontal: spacing.md,
-      paddingVertical: 8,
-    },
-    cancelText: {
-      color: colors.textSecondary,
-      fontSize: typography.body,
-    },
+    cancelBtn: { paddingHorizontal: spacing.md, paddingVertical: 8 },
+    cancelText: { color: colors.textSecondary, fontSize: typography.body },
     submitBtn: {
       backgroundColor: colors.textPrimary,
       borderRadius: radiuses.sm,

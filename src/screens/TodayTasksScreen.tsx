@@ -1,6 +1,6 @@
 /**
- * Laya (లయ) Mobile — Today's Tasks Screen
- * Remaining vs Completed & Rested Buckets (ADR-0004, ADR-0010)
+ * Laya (లయ) Mobile — Today's Tasks Screen (ADR-0004, ADR-0010, ADR-0012)
+ * Remaining vs Completed & Rested Buckets
  */
 
 import React from 'react';
@@ -16,7 +16,9 @@ interface Props {
   groups: UserGroup[];
   onToggleComplete: (taskId: string) => void;
   onToggleMilestone: (taskId: string, milestoneId: string) => void;
+  onSkipMilestone?: (taskId: string, milestoneId: string, reason?: string) => void;
   onUpdateQuantified: (taskId: string, delta: number) => void;
+  onSetQuantifiedExact?: (taskId: string, value: number) => void;
   onToggleIgnore: (taskId: string) => void;
   onEditTask?: (task: Task) => void;
   onDeleteTask?: (taskId: string, title: string) => void;
@@ -28,13 +30,31 @@ export const TodayTasksScreen: React.FC<Props> = ({
   groups,
   onToggleComplete,
   onToggleMilestone,
+  onSkipMilestone,
   onUpdateQuantified,
+  onSetQuantifiedExact,
   onToggleIgnore,
   onEditTask,
   onDeleteTask,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
+
+  const renderCard = (item: EvaluatedTask) => (
+    <TaskCard
+      key={item.task.id}
+      evaluated={item}
+      group={groups.find((g) => g.id === item.task.groupId)}
+      onToggleComplete={onToggleComplete}
+      onToggleMilestone={onToggleMilestone}
+      onSkipMilestone={onSkipMilestone}
+      onUpdateQuantified={onUpdateQuantified}
+      onSetQuantifiedExact={onSetQuantifiedExact}
+      onToggleIgnore={onToggleIgnore}
+      onEditTask={onEditTask}
+      onDeleteTask={onDeleteTask}
+    />
+  );
 
   return (
     <View style={styles.container}>
@@ -56,19 +76,7 @@ export const TodayTasksScreen: React.FC<Props> = ({
           </Text>
         </View>
       ) : (
-        remainingTasks.map((item) => (
-          <TaskCard
-            key={item.task.id}
-            evaluated={item}
-            group={groups.find((g) => g.id === item.task.groupId)}
-            onToggleComplete={onToggleComplete}
-            onToggleMilestone={onToggleMilestone}
-            onUpdateQuantified={onUpdateQuantified}
-            onToggleIgnore={onToggleIgnore}
-            onEditTask={onEditTask}
-            onDeleteTask={onDeleteTask}
-          />
-        ))
+        remainingTasks.map(renderCard)
       )}
 
       {/* Bottom Bucket: Completed & Rested Today */}
@@ -81,19 +89,7 @@ export const TodayTasksScreen: React.FC<Props> = ({
             </Text>
           </View>
 
-          {completedOrRestedTasks.map((item) => (
-            <TaskCard
-              key={item.task.id}
-              evaluated={item}
-              group={groups.find((g) => g.id === item.task.groupId)}
-              onToggleComplete={onToggleComplete}
-              onToggleMilestone={onToggleMilestone}
-              onUpdateQuantified={onUpdateQuantified}
-              onToggleIgnore={onToggleIgnore}
-              onEditTask={onEditTask}
-              onDeleteTask={onDeleteTask}
-            />
-          ))}
+          {completedOrRestedTasks.map(renderCard)}
         </View>
       )}
     </View>

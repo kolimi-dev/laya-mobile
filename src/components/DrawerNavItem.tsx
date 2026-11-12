@@ -45,3 +45,4 @@ export const DrawerNavItem: React.FC<Props> = ({
     </TouchableOpacity>
   );
 };
+
