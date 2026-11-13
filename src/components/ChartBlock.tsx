@@ -1,19 +1,23 @@
 /**
  * Laya (లయ) Mobile — Dedicated Deterministic Chart Block (ADR-0004, ADR-0012)
- * Checklist Heatmap, Quantified Volume/Progression & Milestone Breakdown
+ * Supports Volume Bars, Continuity Ring, Activity Heatmap & Progression Line.
  */
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
-import { PinnedChart, Task, CompletionEvent } from '../core/types';
-import { getOperationalDate } from '../core/recurrence';
+import { PinnedChart, Task, CompletionEvent, TimeWindow } from '../core/types';
+import { VolumeBarsVisualizer } from './charts/VolumeBarsVisualizer';
+import { ContinuityRingVisualizer } from './charts/ContinuityRingVisualizer';
+import { ActivityHeatmapVisualizer } from './charts/ActivityHeatmapVisualizer';
+import { ProgressionLineVisualizer } from './charts/ProgressionLineVisualizer';
 
 interface Props {
   chart: PinnedChart;
   task: Task;
   events: CompletionEvent[];
+  timeWindow?: TimeWindow;
   isFirst: boolean;
   isLast: boolean;
   onMoveUp: (chartId: string) => void;
@@ -25,42 +29,47 @@ export const ChartBlock: React.FC<Props> = ({
   chart,
   task,
   events,
+  timeWindow = '7d',
   isFirst,
   isLast,
   onMoveUp,
   onMoveDown,
   onRemove,
 }) => {
-  const { colors, theme } = useTheme();
+  const { colors } = useTheme();
   const styles = getStyles(colors);
-  const isDark = theme === 'dark';
 
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const getDaysCount = (tw: TimeWindow): number => {
+    switch (tw) {
+      case '7d': return 7;
+      case '30d':
+      case 'month':
+      case 'last_month': return 30;
+      case 'year':
+      case '1y': return 60;
+      default: return 7;
+    }
+  };
 
-  // Calculate 7-day data for quantified
-  const volumeData = useMemo(() => {
-    const now = new Date();
-    return days.map((day, idx) => {
-      const d = new Date(now);
-      d.setDate(d.getDate() - (6 - idx));
-      const op = getOperationalDate(d);
-      const match = events.find((e) => getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString);
-      const val = match?.quantifiedValue || 0;
-      const target = task.targetAmount || 1;
-      const pct = Math.min(100, Math.round((val / target) * 100));
-      return { day, val, pct, isDone: pct >= 100 };
-    });
-  }, [events, task]);
+  const daysCount = getDaysCount(timeWindow);
+  const visualizerStyle = chart.chartType;
+
+  const getSubtitle = () => {
+    switch (visualizerStyle) {
+      case 'volume_bars': return 'Volume Bars';
+      case 'continuity_ring': return 'Continuity Ring';
+      case 'progression_line':
+      case 'progress_trend': return 'Progression Line';
+      default: return 'Activity Heatmap';
+    }
+  };
 
   return (
     <View style={styles.block}>
-      {/* Header & Reorder Controls */}
       <View style={styles.header}>
         <View style={styles.titleWrap}>
           <Text style={styles.title}>{task.title}</Text>
-          <Text style={styles.subtitle}>
-            {task.flavor === 'quantified' ? 'Volume & 30-Day Trend' : task.flavor === 'milestone' ? 'Step Distribution' : 'Rhythm Matrix'}
-          </Text>
+          <Text style={styles.subtitle}>{getSubtitle()}</Text>
         </View>
 
         <View style={styles.actions}>
@@ -80,54 +89,18 @@ export const ChartBlock: React.FC<Props> = ({
         </View>
       </View>
 
-      {/* Quantified: 7-Day Volume Bars */}
-      {task.flavor === 'quantified' && (
-        <View style={styles.barsContainer}>
-          {volumeData.map((d) => (
-            <View key={d.day} style={styles.barCol}>
-              <View style={styles.barTrack}>
-                <View
-                  style={[
-                    styles.barFill,
-                    { height: `${Math.max(8, d.pct)}%` },
-                    d.isDone ? styles.barDone : styles.barProgress,
-                  ]}
-                />
-              </View>
-              <Text style={styles.barLabel}>{d.day}</Text>
-            </View>
-          ))}
-        </View>
+      {/* Polymorphic Visualizer Display */}
+      {visualizerStyle === 'volume_bars' && (
+        <VolumeBarsVisualizer task={task} events={events} daysCount={Math.min(14, daysCount)} />
       )}
-
-      {/* Milestones: Step Breakdown Distribution */}
-      {task.flavor === 'milestone' && task.milestones && (
-        <View style={styles.milestonesDist}>
-          {task.milestones.map((m) => {
-            const checks = events.filter((e) => e.completedMilestones?.includes(m.id)).length;
-            const barWidth = Math.min(100, Math.max(12, checks * 14));
-            return (
-              <View key={m.id} style={styles.distRow}>
-                <Text style={styles.distLabel} numberOfLines={1}>{m.label}</Text>
-                <View style={styles.distTrack}>
-                  <View style={[styles.distFill, { width: `${barWidth}%` }]} />
-                </View>
-                <Text style={styles.distCount}>{checks}x</Text>
-              </View>
-            );
-          })}
-        </View>
+      {visualizerStyle === 'continuity_ring' && (
+        <ContinuityRingVisualizer task={task} events={events} daysCount={daysCount} />
       )}
-
-      {/* Checklist: 14-Day Activity Heatmap Blocks */}
-      {(task.flavor === 'checklist' || task.flavor === 'one_time' || task.flavor === 'percentage') && (
-        <View style={styles.matrixContainer}>
-          {Array.from({ length: 14 }).map((_, i) => {
-            const intensity = (events.length + i) % 4;
-            const bg = intensity === 0 ? colors.bgInput : intensity === 1 ? (isDark ? '#133522' : '#DCFCE7') : intensity === 2 ? (isDark ? '#195430' : '#86EFAC') : colors.done;
-            return <View key={i} style={[styles.matrixSquare, { backgroundColor: bg }]} />;
-          })}
-        </View>
+      {(visualizerStyle === 'progression_line' || visualizerStyle === 'progress_trend') && (
+        <ProgressionLineVisualizer task={task} events={events} daysCount={Math.min(30, daysCount)} />
+      )}
+      {(visualizerStyle === 'activity_heatmap' || visualizerStyle === 'rhythm_matrix') && (
+        <ActivityHeatmapVisualizer task={task} events={events} daysCount={Math.min(28, daysCount)} />
       )}
     </View>
   );
@@ -159,6 +132,7 @@ const getStyles = (colors: ColorPalette = darkColors) =>
       color: colors.textTertiary,
       fontSize: typography.caption,
       textTransform: 'uppercase',
+      letterSpacing: 0.5,
     },
     actions: { flexDirection: 'row', gap: 4 },
     ctrlBtn: {
@@ -173,32 +147,4 @@ const getStyles = (colors: ColorPalette = darkColors) =>
     },
     ctrlText: { color: colors.textSecondary, fontSize: 10 },
     removeText: { color: colors.danger, fontSize: 12 },
-    barsContainer: {
-      flexDirection: 'row',
-      alignItems: 'flex-end',
-      justifyContent: 'space-between',
-      height: 90,
-      paddingTop: spacing.xs,
-    },
-    barCol: { flex: 1, alignItems: 'center', gap: 4 },
-    barTrack: {
-      width: 14,
-      height: 70,
-      backgroundColor: colors.bgInput,
-      borderRadius: radiuses.sm,
-      justifyContent: 'flex-end',
-      overflow: 'hidden',
-    },
-    barFill: { width: '100%', borderRadius: radiuses.sm },
-    barDone: { backgroundColor: colors.done },
-    barProgress: { backgroundColor: colors.progress },
-    barLabel: { color: colors.textTertiary, fontSize: 9 },
-    milestonesDist: { gap: 6, paddingVertical: spacing.xs },
-    distRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    distLabel: { width: 90, color: colors.textSecondary, fontSize: 11 },
-    distTrack: { flex: 1, height: 10, backgroundColor: colors.bgInput, borderRadius: radiuses.full, overflow: 'hidden' },
-    distFill: { height: '100%', backgroundColor: colors.primary, borderRadius: radiuses.full },
-    distCount: { color: colors.textTertiary, fontSize: 10, width: 24, textAlign: 'right' },
-    matrixContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingVertical: spacing.xs },
-    matrixSquare: { width: 20, height: 20, borderRadius: radiuses.sm },
   });
