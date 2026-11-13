@@ -125,7 +125,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
               </View>
               <View style={styles.userDetails}>
                 <Text style={styles.userName} numberOfLines={1}>{displayName}</Text>
-                <Text style={styles.userId} numberOfLines={1}>{userId}</Text>
+                <Text style={styles.userEmail} numberOfLines={1}>{session ? email : 'Local Offline Mode'}</Text>
               </View>
             </TouchableOpacity>
 

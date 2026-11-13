@@ -74,6 +74,10 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
     avatarText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
     userDetails: { flex: 1 },
     userName: { color: colors.textPrimary, fontSize: typography.body, fontWeight: '600' },
+    userEmail: {
+      color: colors.textTertiary,
+      fontSize: 11,
+    },
     userId: {
       color: colors.textTertiary,
       fontSize: 11,

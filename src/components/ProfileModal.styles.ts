@@ -29,16 +29,8 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       justifyContent: 'space-between',
       marginBottom: spacing.md,
     },
-    title: {
-      color: colors.textPrimary,
-      fontSize: typography.heading,
-      fontWeight: '700',
-    },
-    closeIcon: {
-      color: colors.textSecondary,
-      fontSize: 18,
-      padding: 4,
-    },
+    title: { color: colors.textPrimary, fontSize: typography.heading, fontWeight: '700' },
+    closeIcon: { color: colors.textSecondary, fontSize: 18, padding: 4 },
     identityCard: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -58,33 +50,26 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    avatarText: {
-      color: '#FFFFFF',
-      fontSize: 18,
-      fontWeight: '700',
+    avatarText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
+    identityDetails: { flex: 1 },
+    identityName: { color: colors.textPrimary, fontSize: typography.subheading, fontWeight: '600' },
+    statusPillRow: { flexDirection: 'row', marginTop: 4 },
+    verifiedPill: {
+      backgroundColor: 'rgba(34, 197, 94, 0.15)',
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: radiuses.full,
     },
-    identityDetails: {
-      flex: 1,
+    verifiedPillText: { color: '#4ADE80', fontSize: 11, fontWeight: '600' },
+    offlinePill: {
+      backgroundColor: colors.bgActive,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: radiuses.full,
     },
-    identityName: {
-      color: colors.textPrimary,
-      fontSize: typography.subheading,
-      fontWeight: '600',
-    },
-    identityId: {
-      color: colors.textTertiary,
-      fontSize: typography.caption,
-      fontFamily: 'monospace',
-      marginTop: 2,
-    },
-    field: {
-      marginBottom: spacing.sm,
-    },
-    label: {
-      color: colors.textSecondary,
-      fontSize: typography.caption,
-      marginBottom: 4,
-    },
+    offlinePillText: { color: colors.textTertiary, fontSize: 11, fontWeight: '500' },
+    field: { marginBottom: spacing.sm },
+    label: { color: colors.textSecondary, fontSize: typography.caption, marginBottom: 4 },
     input: {
       backgroundColor: colors.bgDark,
       color: colors.textPrimary,
@@ -95,10 +80,22 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       paddingVertical: spacing.sm,
       fontSize: typography.body,
     },
-    readonlyInput: {
-      opacity: 0.7,
-      color: colors.textSecondary,
+    readonlyInput: { opacity: 0.7, color: colors.textSecondary },
+    phoneRow: { flexDirection: 'row', gap: spacing.sm },
+    countryBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.bgDark,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: radiuses.md,
+      paddingHorizontal: spacing.sm,
+      gap: 4,
     },
+    flag: { fontSize: 18 },
+    dialCode: { color: colors.textPrimary, fontSize: typography.body, fontWeight: '600' },
+    chevron: { color: colors.textTertiary, fontSize: 10 },
+    phoneInput: { flex: 1 },
     oauthSection: {
       marginTop: spacing.sm,
       paddingTop: spacing.sm,
@@ -123,42 +120,24 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       borderWidth: 1,
       gap: spacing.sm,
     },
-    providerIcon: {
-      fontSize: 16,
-    },
-    providerInfo: {
-      flex: 1,
-    },
-    providerName: {
-      color: colors.textPrimary,
-      fontSize: typography.caption + 1,
-      fontWeight: '600',
-    },
-    providerDesc: {
-      color: colors.textTertiary,
-      fontSize: 11,
-    },
+    providerIcon: { fontSize: 16 },
+    providerInfo: { flex: 1 },
+    providerName: { color: colors.textPrimary, fontSize: typography.caption + 1, fontWeight: '600' },
+    providerDesc: { color: colors.textTertiary, fontSize: 11 },
     activePill: {
       backgroundColor: 'rgba(34, 197, 94, 0.15)',
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: radiuses.full,
     },
-    activePillText: {
-      color: '#4ADE80',
-      fontSize: 11,
-      fontWeight: '600',
-    },
-    linkPill: {
+    activePillText: { color: '#4ADE80', fontSize: 11, fontWeight: '600' },
+    comingSoonPill: {
       backgroundColor: colors.bgActive,
       paddingHorizontal: 8,
       paddingVertical: 2,
       borderRadius: radiuses.full,
     },
-    linkPillText: {
-      color: colors.textTertiary,
-      fontSize: 11,
-    },
+    comingSoonPillText: { color: colors.textTertiary, fontSize: 11, fontWeight: '500' },
     statusSuccess: {
       color: '#4ADE80',
       fontSize: typography.caption,
@@ -174,26 +153,15 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       borderTopWidth: 1,
       borderTopColor: colors.borderSubtle,
     },
-    signOutBtn: {
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-    },
-    signOutText: {
-      color: colors.danger,
-      fontSize: typography.body,
-      fontWeight: '600',
-    },
+    signOutBtn: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+    signOutText: { color: colors.danger, fontSize: typography.body, fontWeight: '600' },
     saveBtn: {
       backgroundColor: colors.textPrimary,
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.lg,
       borderRadius: radiuses.md,
     },
-    saveBtnText: {
-      color: colors.bgDark,
-      fontWeight: '600',
-      fontSize: typography.body,
-    },
+    saveBtnText: { color: colors.bgDark, fontWeight: '600', fontSize: typography.body },
   });
 
 export const styles = getStyles();

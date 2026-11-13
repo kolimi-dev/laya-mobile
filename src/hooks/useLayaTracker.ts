@@ -36,7 +36,9 @@ export function useLayaTracker() {
     setGroups(data.groups);
     setTasks(data.tasks);
     setEvents(data.events);
-    setPinnedCharts(data.pinnedCharts);
+    const valid = data.pinnedCharts.filter((c) => data.tasks.some((t) => t.id === c.taskId && !t.deletedAt));
+    if (valid.length !== data.pinnedCharts.length) await StorageService.savePinnedCharts(valid, uid);
+    setPinnedCharts(valid);
   }, []);
 
   const triggerSync = useCallback(async () => {
@@ -62,16 +64,12 @@ export function useLayaTracker() {
   }, [loadUserData]);
 
   useEffect(() => {
-    if (!loading) loadUserData(activeUserId).then(() => triggerSync());
-  }, [activeUserId, loading, loadUserData, triggerSync]);
-
-  useEffect(() => {
     if (!loading) {
-      triggerSync();
+      loadUserData(activeUserId).then(() => triggerSync());
       const interval = setInterval(triggerSync, CONFIG.SYNC_INTERVAL_MS);
       return () => clearInterval(interval);
     }
-  }, [loading, triggerSync]);
+  }, [activeUserId, loading, loadUserData, triggerSync]);
 
   const evaluatedTasks = useMemo<EvaluatedTask[]>(() => {
     return tasks
@@ -93,6 +91,7 @@ export function useLayaTracker() {
   }, [evaluatedTasks]);
 
   const chartRecommendations = useMemo(() => getChartRecommendations(tasks, pinnedCharts), [tasks, pinnedCharts]);
+  const validPinnedCharts = useMemo(() => pinnedCharts.filter((c) => tasks.some((t) => t.id === c.taskId && !t.deletedAt)), [pinnedCharts, tasks]);
 
   const appendEvent = async (
     eventData: Omit<CompletionEvent, 'id' | 'userId' | 'occurredAt'>,
@@ -188,6 +187,8 @@ export function useLayaTracker() {
     await StorageService.softDeleteTask(taskId, activeUserId);
     await NotificationService.cancelTaskReminder(taskId);
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, deletedAt: new Date().toISOString() } : t)));
+    const clean = pinnedCharts.filter((c) => c.taskId !== taskId);
+    if (clean.length !== pinnedCharts.length) { setPinnedCharts(clean); await StorageService.savePinnedCharts(clean, activeUserId); }
   };
 
   const handleRestoreTask = async (taskId: string) => {
@@ -198,6 +199,8 @@ export function useLayaTracker() {
   const handlePurgeTask = async (taskId: string) => {
     await StorageService.purgeTaskPermanently(taskId, activeUserId);
     setTasks(tasks.filter((t) => t.id !== taskId));
+    const clean = pinnedCharts.filter((c) => c.taskId !== taskId);
+    if (clean.length !== pinnedCharts.length) { setPinnedCharts(clean); await StorageService.savePinnedCharts(clean, activeUserId); }
   };
 
   const handleEmptyTrash = async () => {
@@ -210,22 +213,14 @@ export function useLayaTracker() {
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, lifecycleStatus: status, archivedAt: status === 'active' ? null : new Date().toISOString() } : t)));
   };
 
-  const handleUpdateProfile = async (p: UserProfile) => {
-    await AuthService.saveProfile(p);
-    setProfile(p);
-  };
-
-  const handleLogout = async () => {
-    await AuthService.logout();
-    setSession(null);
-    setIsAuthSkipped(false);
-  };
+  const handleUpdateProfile = async (p: UserProfile) => { await AuthService.saveProfile(p); setProfile(p); };
+  const handleLogout = async () => { await AuthService.logout(); setSession(null); setIsAuthSkipped(false); };
 
   return {
     loading, session, setSession, profile, setProfile, handleUpdateProfile,
     isAuthSkipped, setIsAuthSkipped, isOnline, isSyncing, triggerSync, opInfo,
     activeGroupId, setActiveGroupId, groups, tasks, events,
-    pinnedCharts, remainingTasks, completedOrRestedTasks, consistencyScore,
+    pinnedCharts, validPinnedCharts, remainingTasks, completedOrRestedTasks, consistencyScore,
     chartRecommendations, handleToggleComplete, handleToggleMilestone,
     handleSkipMilestone, handleUpdateQuantified, handleSetQuantifiedExact,
     handleToggleIgnore, handlePinRecommendation, handlePinTaskChart, handleMoveChart,

@@ -171,7 +171,7 @@ function MainApp() {
         isSyncing={tracker.isSyncing}
         onSyncPress={tracker.triggerSync}
         remainingTasksCount={tracker.remainingTasks.length}
-        pinnedChartsCount={tracker.pinnedCharts.length}
+        pinnedChartsCount={tracker.validPinnedCharts.length}
         notActiveCount={notActiveCount}
         trashCount={trashCount}
         onOpenGuide={() => setGuideVisible(true)}
@@ -192,6 +192,7 @@ function MainApp() {
         session={tracker.session}
         onClose={() => setProfileVisible(false)}
         onOpenGuide={() => setGuideVisible(true)}
+        onSaveProfile={tracker.handleUpdateProfile}
         onLogout={tracker.handleLogout}
       />
       <FeedbackModal
