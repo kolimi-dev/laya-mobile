@@ -3,7 +3,7 @@
  * Night Owl Offset (03:00 AM cutoff) and Cadence Isolation
  */
 
-import { Task, CompletionEvent } from './types';
+import { Task, CompletionEvent, TimeWindow } from './types';
 
 export const NIGHT_OWL_OFFSET_HOURS = 3; // 03:00 AM
 
@@ -122,5 +122,43 @@ export function filterEventsForTaskCadence(
       return eventOp.year === opInfo.year;
     }
     return eventOp.dateString === opInfo.dateString;
+  });
+}
+
+/**
+ * Filters completion events by dashboard-selected time window (ADR-0012, Phase C).
+ */
+export function filterEventsByTimeWindow(
+  events: CompletionEvent[],
+  timeWindow: TimeWindow
+): CompletionEvent[] {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+
+  return events.filter((e) => {
+    const eventDate = new Date(e.occurredAt);
+    const diffMs = now.getTime() - eventDate.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+    switch (timeWindow) {
+      case '7d':
+        return diffDays >= 0 && diffDays <= 7;
+      case '30d':
+        return diffDays >= 0 && diffDays <= 30;
+      case 'month':
+        return eventDate.getFullYear() === currentYear && eventDate.getMonth() === currentMonth;
+      case 'last_month': {
+        const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+        return eventDate.getFullYear() === lastMonthYear && eventDate.getMonth() === lastMonth;
+      }
+      case 'year':
+        return eventDate.getFullYear() === currentYear;
+      case '1y':
+        return diffDays >= 0 && diffDays <= 365;
+      default:
+        return true;
+    }
   });
 }
