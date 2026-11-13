@@ -39,6 +39,9 @@ export interface NavigationDrawerProps {
   onOpenGuide: () => void;
   onOpenProfile: () => void;
   onOpenFeedback?: () => void;
+  updateAvailableVersion?: string | null;
+  onTriggerUpdate?: () => void;
+  onOpenPrivacy?: () => void;
 }
 
 export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
@@ -58,6 +61,9 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   onOpenGuide,
   onOpenProfile,
   onOpenFeedback,
+  updateAvailableVersion,
+  onTriggerUpdate,
+  onOpenPrivacy,
 }) => {
   const { colors, theme, toggleTheme } = useTheme();
   const styles = getStyles(colors);
@@ -140,6 +146,21 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
           </View>
 
           <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {updateAvailableVersion ? (
+              <TouchableOpacity
+                style={styles.updatePill}
+                onPress={() => { handleClose(); onTriggerUpdate?.(); }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.updateIcon}>🚀</Text>
+                <View style={styles.updateDetails}>
+                  <Text style={styles.updateTitle}>Update to v{updateAvailableVersion} Available</Text>
+                  <Text style={styles.updateSubtitle}>Tap to download standalone APK</Text>
+                </View>
+                <Text style={styles.updateChevron}>›</Text>
+              </TouchableOpacity>
+            ) : null}
+
             <Text style={styles.sectionLabel}>Rhythm & Habits</Text>
             <DrawerNavItem
               icon="📋"
@@ -181,6 +202,19 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
               badge={theme === 'dark' ? 'Dark' : 'Light'}
               onPress={toggleTheme}
             />
+            <DrawerNavItem
+              icon="⏰"
+              label="Day Rollover"
+              badge="03:00 AM"
+              onPress={() => {
+                Alert.alert(
+                  'Day Rollover Anchor (03:00 AM)',
+                  'Your daily rhythm resets at 03:00 AM instead of midnight so evening habits never reset prematurely.',
+                  [{ text: 'OK' }]
+                );
+              }}
+            />
+            <DrawerNavItem icon="🛡️" label="Privacy & Ethics" onPress={() => { handleClose(); onOpenPrivacy?.(); }} />
             <DrawerNavItem icon="⚙️" label="Kolimi ID Profile" onPress={() => { handleClose(); onOpenProfile(); }} />
           </ScrollView>
 
