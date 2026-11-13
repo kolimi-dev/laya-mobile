@@ -47,8 +47,9 @@ export async function speakReminder(
     };
   }
 
+  // Phonetic "Laa-yaa" prevents English TTS engines from pronouncing it as "Layer" (/ˈleɪ.ə/)
   const prompt =
-    customMessage || `Gentle reminder from Laya: It is time for ${taskTitle}.`;
+    customMessage || `Gentle reminder from Laa-yaa: It is time for ${taskTitle}.`;
 
   try {
     const isSpeaking = await Speech.isSpeakingAsync();
@@ -75,6 +76,11 @@ export async function speakTeluguPrompt(
   prompt: string
 ): Promise<{ spoken: boolean }> {
   try {
+    const isSpeaking = await Speech.isSpeakingAsync();
+    if (isSpeaking) {
+      await Speech.stop();
+    }
+
     Speech.speak(prompt, {
       language: 'te-IN',
       pitch: 1.0,
@@ -84,5 +90,23 @@ export async function speakTeluguPrompt(
   } catch {
     return { spoken: false };
   }
+}
+
+/**
+ * Native Telugu reminder with authentic script and phonetics
+ */
+export async function speakTeluguReminder(
+  taskTitle: string,
+  group?: UserGroup
+): Promise<{ spoken: boolean; reason?: string }> {
+  const quietStart = group?.quietHoursStart || '22:00';
+  const quietEnd = group?.quietHoursEnd || '07:30';
+
+  if (isInQuietHours(new Date(), quietStart, quietEnd)) {
+    return { spoken: false, reason: 'Quiet hours active.' };
+  }
+
+  const prompt = `లయ నుండి సున్నితమైన జ్ఞాపిక: ${taskTitle} సమయం ఆసన్నమైంది.`;
+  return speakTeluguPrompt(prompt);
 }
 
