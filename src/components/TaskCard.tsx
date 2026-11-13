@@ -83,11 +83,21 @@ export const TaskCard: React.FC<Props> = ({
                 <Text style={styles.metaPillText}>⏰ {task.reminderTime}</Text>
               </View>
             ) : null}
-            {task.flavor === 'one_time' && task.targetDate ? (
-              <View style={styles.metaPill}>
-                <Text style={styles.metaPillText}>📅 {task.targetDate}</Text>
-              </View>
-            ) : null}
+            {(task.frequency === 'one_time' || task.flavor === 'one_time') && task.targetDate && (
+              <View style={styles.metaPill}><Text style={styles.metaPillText}>📅 {task.targetDate}</Text></View>
+            )}
+            {task.frequency === 'monthly' && (
+              <View style={styles.metaPill}><Text style={styles.metaPillText}>🗓️ Day {task.dayOfMonth || 1}</Text></View>
+            )}
+            {task.frequency === 'yearly' && (
+              <View style={styles.metaPill}><Text style={styles.metaPillText}>🗓️ {task.monthOfYear || 1}/{task.dayOfMonth || 1}</Text></View>
+            )}
+            {task.frequency === 'custom' && task.intervalDays && (
+              <View style={styles.metaPill}><Text style={styles.metaPillText}>🔄 {task.intervalDays}d</Text></View>
+            )}
+            {task.frequency === 'anytime' && (
+              <View style={styles.metaPill}><Text style={styles.metaPillText}>Backlog</Text></View>
+            )}
           </View>
         </View>
 

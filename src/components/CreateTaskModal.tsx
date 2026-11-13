@@ -1,17 +1,10 @@
 /**
  * Laya (లయ) Mobile — Create Task Modal (ADR-0005, ADR-0012)
- * 4 Distinct Flavors, Generic Step Jump, Disjunctive Milestones & Day Combinations
+ * Clean separation of How you measure (Flavor) vs When you do it (Schedule)
  */
 
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-  ScrollView,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { Task, TaskFlavor, FrequencyType, UserGroup, MilestoneItem, MilestoneMode } from '../core/types';
 import { generateUUID } from '../services/storage';
@@ -21,10 +14,9 @@ import { TaskQuantifiedFields } from './TaskQuantifiedFields';
 import { getStyles } from './CreateTaskModal.styles';
 
 const FLAVORS: { id: TaskFlavor; label: string }[] = [
-  { id: 'checklist', label: 'Checklist' },
-  { id: 'quantified', label: 'Quantified' },
+  { id: 'checklist', label: 'Simple Checklist' },
+  { id: 'quantified', label: 'Target Number' },
   { id: 'milestone', label: 'Milestones' },
-  { id: 'one_time', label: 'One-Time' },
 ];
 
 interface Props {
@@ -56,6 +48,8 @@ export const CreateTaskModal: React.FC<Props> = ({
   const [milestoneMode, setMilestoneMode] = useState<MilestoneMode>('all');
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
   const [dayOfMonth, setDayOfMonth] = useState('1');
+  const [monthOfYear, setMonthOfYear] = useState('1');
+  const [intervalDays, setIntervalDays] = useState('2');
   const [targetDate, setTargetDate] = useState('');
   const [reminderTime, setReminderTime] = useState('');
 
@@ -63,8 +57,8 @@ export const CreateTaskModal: React.FC<Props> = ({
     if (initialTask) {
       setTitle(initialTask.title);
       setGroupId(initialTask.groupId);
-      setFlavor(initialTask.flavor === 'percentage' ? 'quantified' : initialTask.flavor);
-      setFrequency(initialTask.frequency);
+      setFlavor(initialTask.flavor === 'one_time' ? 'checklist' : initialTask.flavor === 'percentage' ? 'quantified' : initialTask.flavor);
+      setFrequency(initialTask.flavor === 'one_time' ? 'one_time' : initialTask.frequency);
       setTargetAmount(initialTask.targetAmount ? String(initialTask.targetAmount) : '4');
       setStepAmount(initialTask.stepAmount ? String(initialTask.stepAmount) : '1');
       setUnit(initialTask.unit || '');
@@ -72,6 +66,8 @@ export const CreateTaskModal: React.FC<Props> = ({
       setMilestoneMode(initialTask.milestoneMode || 'all');
       setDaysOfWeek(initialTask.daysOfWeek || [1, 2, 3, 4, 5]);
       setDayOfMonth(initialTask.dayOfMonth ? String(initialTask.dayOfMonth) : '1');
+      setMonthOfYear(initialTask.monthOfYear ? String(initialTask.monthOfYear) : '1');
+      setIntervalDays(initialTask.intervalDays ? String(initialTask.intervalDays) : '2');
       setTargetDate(initialTask.targetDate || '');
       setReminderTime(initialTask.reminderTime || '');
     } else {
@@ -86,6 +82,8 @@ export const CreateTaskModal: React.FC<Props> = ({
       setMilestoneMode('all');
       setDaysOfWeek([1, 2, 3, 4, 5]);
       setDayOfMonth('1');
+      setMonthOfYear('1');
+      setIntervalDays('2');
       setTargetDate(new Date().toISOString().split('T')[0]);
       setReminderTime('');
     }
@@ -100,10 +98,12 @@ export const CreateTaskModal: React.FC<Props> = ({
       groupId,
       title: title.trim(),
       flavor,
-      frequency: flavor === 'one_time' ? 'anytime' : frequency,
+      frequency,
       daysOfWeek: frequency === 'days_of_week' ? daysOfWeek : undefined,
-      dayOfMonth: frequency === 'monthly' ? parseInt(dayOfMonth, 10) || 1 : undefined,
-      targetDate: flavor === 'one_time' ? (targetDate.trim() || undefined) : undefined,
+      dayOfMonth: (frequency === 'monthly' || frequency === 'yearly') ? parseInt(dayOfMonth, 10) || 1 : undefined,
+      monthOfYear: frequency === 'yearly' ? parseInt(monthOfYear, 10) || 1 : undefined,
+      intervalDays: frequency === 'custom' ? parseInt(intervalDays, 10) || 2 : undefined,
+      targetDate: frequency === 'one_time' ? (targetDate.trim() || undefined) : undefined,
       targetAmount: flavor === 'quantified' ? (parseFloat(targetAmount) || undefined) : undefined,
       stepAmount: flavor === 'quantified' ? (parseFloat(stepAmount) || 1) : undefined,
       unit: flavor === 'quantified' ? unit.trim() : undefined,
@@ -151,16 +151,14 @@ export const CreateTaskModal: React.FC<Props> = ({
                     style={[styles.selectPill, groupId === grp.id && styles.selectPillActive]}
                     onPress={() => setGroupId(grp.id)}
                   >
-                    <Text style={[styles.selectText, groupId === grp.id && styles.selectTextActive]}>
-                      {grp.name}
-                    </Text>
+                    <Text style={[styles.selectText, groupId === grp.id && styles.selectTextActive]}>{grp.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Habit Flavor</Text>
+              <Text style={styles.label}>How do you measure it? (Flavor)</Text>
               <View style={styles.pillRow}>
                 {FLAVORS.map((flv) => (
                   <TouchableOpacity
@@ -168,9 +166,7 @@ export const CreateTaskModal: React.FC<Props> = ({
                     style={[styles.selectPill, flavor === flv.id && styles.selectPillActive]}
                     onPress={() => setFlavor(flv.id)}
                   >
-                    <Text style={[styles.selectText, flavor === flv.id && styles.selectTextActive]}>
-                      {flv.label}
-                    </Text>
+                    <Text style={[styles.selectText, flavor === flv.id && styles.selectTextActive]}>{flv.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -196,27 +192,19 @@ export const CreateTaskModal: React.FC<Props> = ({
               />
             )}
 
-            {flavor === 'one_time' && (
-              <View style={styles.field}>
-                <Text style={styles.label}>Target Due Date (YYYY-MM-DD)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={targetDate}
-                  onChangeText={setTargetDate}
-                  placeholder="2026-11-15"
-                  placeholderTextColor={colors.textTertiary}
-                />
-              </View>
-            )}
-
             <TaskFrequencyFields
-              isOneTime={flavor === 'one_time'}
               frequency={frequency}
               onFrequencyChange={setFrequency}
               daysOfWeek={daysOfWeek}
               onDaysChange={setDaysOfWeek}
               dayOfMonth={dayOfMonth}
               onDayOfMonthChange={setDayOfMonth}
+              monthOfYear={monthOfYear}
+              onMonthOfYearChange={setMonthOfYear}
+              intervalDays={intervalDays}
+              onIntervalDaysChange={setIntervalDays}
+              targetDate={targetDate}
+              onTargetDateChange={setTargetDate}
               reminderTime={reminderTime}
               onReminderTimeChange={setReminderTime}
             />

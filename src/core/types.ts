@@ -16,6 +16,8 @@ export type FrequencyType =
   | 'monthly'
   | 'quarterly'
   | 'yearly'
+  | 'custom'
+  | 'one_time'
   | 'anytime';
 
 export type EventStatus = 'completed' | 'in_progress' | 'ignored';
@@ -37,7 +39,9 @@ export interface Task {
   frequency: FrequencyType;
   daysOfWeek?: number[]; // 0=Sun, 1=Mon ... 6=Sat
   dayOfMonth?: number;   // 1-31
-  monthOfYear?: number;
+  monthOfYear?: number;  // 1-12
+  intervalDays?: number; // e.g. 2 for every 2 days
+  intervalMonths?: number; // e.g. 3 for every 3 months
   targetAmount?: number;
   stepAmount?: number;   // Configurable jump e.g. 0.5, 250, 5, 0.1
   unit?: string;

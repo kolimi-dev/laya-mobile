@@ -59,7 +59,7 @@ export function isTaskScheduledForDate(
   if (task.archivedAt || task.deletedAt) return false;
 
   // One-time tasks are scheduled only on their target date (or today if unspecified)
-  if (task.flavor === 'one_time') {
+  if (task.frequency === 'one_time' || task.flavor === 'one_time') {
     if (task.targetDate) {
       return task.targetDate === opInfo.dateString;
     }
@@ -80,6 +80,14 @@ export function isTaskScheduledForDate(
         task.dayOfMonth === opInfo.dayOfMonth &&
         task.monthOfYear === opInfo.month + 1
       );
+    case 'custom':
+      if (task.intervalDays && task.intervalDays > 1) {
+        const createdOp = getOperationalDate(new Date(task.createdAt));
+        const diffMs = opInfo.date.getTime() - createdOp.date.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        return diffDays >= 0 && diffDays % task.intervalDays === 0;
+      }
+      return true;
     case 'anytime':
       return true;
     default:
@@ -89,26 +97,29 @@ export function isTaskScheduledForDate(
 
 /**
  * Isolates completion events to the task's recurrence cadence (ADR-0007).
- * Daily tasks only evaluate today's events; Anytime tasks evaluate all historical events.
+ * Daily tasks only evaluate today's events; Anytime/One-time tasks evaluate all historical events.
  */
 export function filterEventsForTaskCadence(
   task: Task,
   events: CompletionEvent[],
   opInfo: OperationalDateInfo
 ): CompletionEvent[] {
-  if (task.frequency === 'anytime' || task.flavor === 'one_time') {
+  if (task.frequency === 'anytime' || task.frequency === 'one_time' || task.flavor === 'one_time') {
     return events; // Persists across dates
   }
 
   return events.filter((e) => {
     const eventOp = getOperationalDate(new Date(e.occurredAt));
-    if (task.frequency === 'daily' || task.frequency === 'days_of_week') {
+    if (task.frequency === 'daily' || task.frequency === 'days_of_week' || task.frequency === 'custom') {
       return eventOp.dateString === opInfo.dateString;
     }
     if (task.frequency === 'monthly') {
       return (
         eventOp.year === opInfo.year && eventOp.month === opInfo.month
       );
+    }
+    if (task.frequency === 'yearly') {
+      return eventOp.year === opInfo.year;
     }
     return eventOp.dateString === opInfo.dateString;
   });
