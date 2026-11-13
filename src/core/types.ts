@@ -81,14 +81,34 @@ export interface UserGroup {
   quietHoursEnd?: string;   // "07:30"
 }
 
-export type ChartType = 'volume_bars' | 'rhythm_matrix' | 'progress_trend';
+export type ChartVisualizerStyle =
+  | 'volume_bars'
+  | 'continuity_ring'
+  | 'activity_heatmap'
+  | 'progression_line'
+  | 'progress_trend'
+  | 'rhythm_matrix';
+
+export type ChartType = ChartVisualizerStyle;
+
+export interface UserDashboard {
+  id: string;
+  userId: string;
+  title: string;
+  icon?: string;
+  sortOrder: number;
+  createdAt: string;
+}
 
 export interface PinnedChart {
   id: string;
   taskId: string;
-  chartType: ChartType;
+  dashboardId?: string;
+  chartType: ChartVisualizerStyle;
   sortOrder: number;
 }
+
+export type TimeWindow = '7d' | '30d' | 'month' | 'last_month' | 'year' | '1y';
 
 export interface TelemetryPayload {
   eventId: string;
