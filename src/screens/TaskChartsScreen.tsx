@@ -1,21 +1,27 @@
 /**
- * Laya (లయ) Mobile — Task Charts Screen (ADR-0004, ADR-0012, Phase 5)
- * Deterministic Group Dashboards (Health, Study, Routine) & Opt-In Charts
+ * Laya (లయ) Mobile — Task Charts & Custom Dashboards Screen (ADR-0004, ADR-0012, Phase C)
+ * User-Created Dashboards, Per-Dashboard Time Window, Deterministic Visualizers
  */
 
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
-import { PinnedChart, Task, CompletionEvent, UserGroup } from '../core/types';
+import { PinnedChart, Task, CompletionEvent, UserDashboard, UserGroup, TimeWindow, ChartVisualizerStyle } from '../core/types';
+import { filterEventsByTimeWindow } from '../core/recurrence';
 import { ChartBlock } from '../components/ChartBlock';
+import { TimeWindowSelector } from '../components/TimeWindowSelector';
+import { CreateDashboardModal } from '../components/CreateDashboardModal';
+import { AddChartModal } from '../components/AddChartModal';
 
 interface Props {
   pinnedCharts: PinnedChart[];
   tasks: Task[];
   events: CompletionEvent[];
+  dashboards: UserDashboard[];
   groups: UserGroup[];
-  onPinChart: (taskId: string) => void;
+  onCreateDashboard: (dash: UserDashboard) => void;
+  onPinChart: (taskId: string, style?: ChartVisualizerStyle, dashboardId?: string) => void;
   onMoveChart: (chartId: string, direction: 'up' | 'down') => void;
   onRemoveChart: (chartId: string) => void;
 }
@@ -24,68 +30,91 @@ export const TaskChartsScreen: React.FC<Props> = ({
   pinnedCharts,
   tasks,
   events,
-  groups,
+  dashboards,
+  onCreateDashboard,
   onPinChart,
   onMoveChart,
   onRemoveChart,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
-  // Filter tasks and pinned charts by the selected group dashboard
-  const activeTasks = useMemo(() => {
-    return tasks.filter((t) => !t.deletedAt && (selectedGroupId ? t.groupId === selectedGroupId : true));
-  }, [tasks, selectedGroupId]);
+  const [activeDashId, setActiveDashId] = useState<string>(dashboards[0]?.id || 'dash_default');
+  const [timeWindow, setTimeWindow] = useState<TimeWindow>('7d');
+  const [createDashOpen, setCreateDashOpen] = useState(false);
+  const [addChartOpen, setAddChartOpen] = useState(false);
 
-  const visiblePinnedCharts = useMemo(() => {
-    return pinnedCharts.filter((c) => activeTasks.some((t) => t.id === c.taskId));
-  }, [pinnedCharts, activeTasks]);
+  const activeDashboard = dashboards.find((d) => d.id === activeDashId) || dashboards[0] || {
+    id: 'dash_default',
+    title: 'Overview',
+    icon: '📊',
+    sortOrder: 1,
+    createdAt: '',
+    userId: '',
+  };
 
-  const unpinnedTasks = useMemo(() => {
-    return activeTasks.filter((t) => !pinnedCharts.some((c) => c.taskId === t.id));
-  }, [activeTasks, pinnedCharts]);
+  const dashboardCharts = useMemo(() => {
+    return pinnedCharts.filter((c) => {
+      const taskExists = tasks.some((t) => t.id === c.taskId && !t.deletedAt);
+      if (!taskExists) return false;
+      return !c.dashboardId || c.dashboardId === activeDashId;
+    });
+  }, [pinnedCharts, tasks, activeDashId]);
+
+  const windowEvents = useMemo(() => {
+    return filterEventsByTimeWindow(events, timeWindow);
+  }, [events, timeWindow]);
 
   return (
     <View style={styles.container}>
-      {/* Group Dashboard Filter Pills (ADR-0012: Health, Study, Routine) */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-        <TouchableOpacity
-          style={[styles.pill, selectedGroupId === null && styles.pillActive]}
-          onPress={() => setSelectedGroupId(null)}
-        >
-          <Text style={[styles.pillText, selectedGroupId === null && styles.pillTextActive]}>
-            All Dashboards
-          </Text>
-        </TouchableOpacity>
-
-        {groups.map((grp) => {
-          const isActive = selectedGroupId === grp.id;
+      {/* User Dashboards Horizontal Bar */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dashRow}>
+        {dashboards.map((dash) => {
+          const isActive = activeDashId === dash.id;
           return (
             <TouchableOpacity
-              key={grp.id}
-              style={[styles.pill, isActive && styles.pillActive]}
-              onPress={() => setSelectedGroupId(grp.id)}
+              key={dash.id}
+              style={[styles.dashPill, isActive && styles.dashPillActive]}
+              onPress={() => setActiveDashId(dash.id)}
+              activeOpacity={0.7}
             >
-              <View style={[styles.dot, { backgroundColor: grp.color }]} />
-              <Text style={[styles.pillText, isActive && styles.pillTextActive]}>
-                {grp.name}
-              </Text>
+              <Text style={styles.dashIcon}>{dash.icon || '📊'}</Text>
+              <Text style={[styles.dashText, isActive && styles.dashTextActive]}>{dash.title}</Text>
             </TouchableOpacity>
           );
         })}
+
+        <TouchableOpacity style={styles.newDashBtn} onPress={() => setCreateDashOpen(true)} activeOpacity={0.7}>
+          <Text style={styles.newDashText}>+ New</Text>
+        </TouchableOpacity>
       </ScrollView>
 
-      {/* Pinned Deterministic Charts */}
-      {visiblePinnedCharts.length === 0 ? (
+      {/* Top Time-Window Selector */}
+      <TimeWindowSelector selected={timeWindow} onChange={setTimeWindow} />
+
+      {/* Dashboard Header Bar */}
+      <View style={styles.dashHeaderBar}>
+        <View style={styles.dashTitleWrap}>
+          <Text style={styles.dashMainTitle}>{activeDashboard.icon} {activeDashboard.title}</Text>
+          <Text style={styles.dashCount}>{dashboardCharts.length} Charts</Text>
+        </View>
+
+        <TouchableOpacity style={styles.addChartBtn} onPress={() => setAddChartOpen(true)} activeOpacity={0.7}>
+          <Text style={styles.addChartText}>+ Add Chart</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Pinned Dashboard Charts */}
+      {dashboardCharts.length === 0 ? (
         <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>0 Pinned Charts</Text>
-          <Text style={styles.emptySubtext}>
-            Deterministic dashboards mapped to your habits. Pin a habit below to visualize progress.
-          </Text>
+          <Text style={styles.emptyTitle}>0 Charts in this Dashboard</Text>
+          <Text style={styles.emptySubtext}>Select any recurring habit to visualize volume bars, streak dials, heatmaps, or progression.</Text>
+          <TouchableOpacity style={styles.addFirstBtn} onPress={() => setAddChartOpen(true)} activeOpacity={0.8}>
+            <Text style={styles.addFirstText}>+ Add Your First Chart</Text>
+          </TouchableOpacity>
         </View>
       ) : (
-        visiblePinnedCharts.map((chart, idx) => {
+        dashboardCharts.map((chart, idx) => {
           const task = tasks.find((t) => t.id === chart.taskId);
           if (!task) return null;
           return (
@@ -93,9 +122,10 @@ export const TaskChartsScreen: React.FC<Props> = ({
               key={chart.id}
               chart={chart}
               task={task}
-              events={events.filter((e) => e.taskId === task.id)}
+              events={windowEvents.filter((e) => e.taskId === task.id)}
+              timeWindow={timeWindow}
               isFirst={idx === 0}
-              isLast={idx === visiblePinnedCharts.length - 1}
+              isLast={idx === dashboardCharts.length - 1}
               onMoveUp={(id) => onMoveChart(id, 'up')}
               onMoveDown={(id) => onMoveChart(id, 'down')}
               onRemove={onRemoveChart}
@@ -104,19 +134,22 @@ export const TaskChartsScreen: React.FC<Props> = ({
         })
       )}
 
-      {/* Quick Pin Tray for Unpinned Habits */}
-      {unpinnedTasks.length > 0 && (
-        <View style={styles.quickPinSection}>
-          <Text style={styles.quickPinLabel}>Available Habit Visualizations</Text>
-          <View style={styles.quickPinRow}>
-            {unpinnedTasks.map((t) => (
-              <TouchableOpacity key={t.id} style={styles.quickPinBtn} onPress={() => onPinChart(t.id)}>
-                <Text style={styles.quickPinText}>+ Pin {t.title}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
+      <CreateDashboardModal
+        visible={createDashOpen}
+        onClose={() => setCreateDashOpen(false)}
+        onSave={(newDash) => {
+          onCreateDashboard(newDash);
+          setActiveDashId(newDash.id);
+        }}
+      />
+
+      <AddChartModal
+        visible={addChartOpen}
+        dashboardTitle={activeDashboard.title}
+        tasks={tasks}
+        onClose={() => setAddChartOpen(false)}
+        onAddChart={(taskId, style) => onPinChart(taskId, style, activeDashId)}
+      />
     </View>
   );
 };
@@ -124,8 +157,8 @@ export const TaskChartsScreen: React.FC<Props> = ({
 const getStyles = (colors: ColorPalette = darkColors) =>
   StyleSheet.create({
     container: { paddingBottom: spacing.xxl },
-    filterRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.md },
-    pill: {
+    dashRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xs },
+    dashPill: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
@@ -134,12 +167,39 @@ const getStyles = (colors: ColorPalette = darkColors) =>
       borderWidth: 1,
       borderRadius: radiuses.full,
       paddingHorizontal: spacing.md,
-      paddingVertical: 5,
+      paddingVertical: 6,
     },
-    pillActive: { backgroundColor: colors.bgActive, borderColor: colors.borderStrong },
-    pillText: { color: colors.textSecondary, fontSize: typography.caption, fontWeight: '500' },
-    pillTextActive: { color: colors.textPrimary, fontWeight: '700' },
-    dot: { width: 6, height: 6, borderRadius: radiuses.full },
+    dashPillActive: { backgroundColor: colors.bgActive, borderColor: colors.borderStrong },
+    dashIcon: { fontSize: 14 },
+    dashText: { color: colors.textSecondary, fontSize: typography.caption, fontWeight: '500' },
+    dashTextActive: { color: colors.textPrimary, fontWeight: '700' },
+    newDashBtn: {
+      backgroundColor: colors.bgInput,
+      borderColor: colors.borderSubtle,
+      borderWidth: 1,
+      borderRadius: radiuses.full,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 6,
+      justifyContent: 'center',
+    },
+    newDashText: { color: colors.primary, fontSize: typography.caption, fontWeight: '600' },
+    dashHeaderBar: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingVertical: spacing.sm,
+      marginBottom: spacing.xs,
+    },
+    dashTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    dashMainTitle: { color: colors.textPrimary, fontSize: typography.subheading, fontWeight: '700' },
+    dashCount: { color: colors.textTertiary, fontSize: typography.caption },
+    addChartBtn: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 6,
+      borderRadius: radiuses.sm,
+    },
+    addChartText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
     emptyCard: {
       backgroundColor: colors.bgCard,
       borderWidth: 1,
@@ -147,21 +207,17 @@ const getStyles = (colors: ColorPalette = darkColors) =>
       borderRadius: radiuses.lg,
       padding: spacing.xl,
       alignItems: 'center',
-      gap: 4,
-      marginBottom: spacing.md,
+      gap: 6,
+      marginTop: spacing.sm,
     },
     emptyTitle: { color: colors.textPrimary, fontSize: typography.heading, fontWeight: '600' },
-    emptySubtext: { color: colors.textTertiary, fontSize: typography.body, textAlign: 'center' },
-    quickPinSection: { marginTop: spacing.md, gap: spacing.xs },
-    quickPinLabel: { color: colors.textTertiary, fontSize: 11, fontWeight: '600', textTransform: 'uppercase' },
-    quickPinRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-    quickPinBtn: {
-      backgroundColor: colors.bgCard,
-      borderWidth: 1,
-      borderColor: colors.borderSubtle,
-      borderRadius: radiuses.sm,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 6,
+    emptySubtext: { color: colors.textTertiary, fontSize: typography.caption, textAlign: 'center', lineHeight: 18 },
+    addFirstBtn: {
+      backgroundColor: colors.primary,
+      marginTop: spacing.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      borderRadius: radiuses.md,
     },
-    quickPinText: { color: colors.primary, fontSize: 11, fontWeight: '600' },
+    addFirstText: { color: '#FFFFFF', fontSize: typography.body, fontWeight: '700' },
   });

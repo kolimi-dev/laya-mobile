@@ -6,7 +6,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { CONFIG } from '../config';
 import { logger } from '../core/logger';
-import { Task, CompletionEvent, UserGroup, PinnedChart, EvaluatedTask } from '../core/types';
+import { Task, CompletionEvent, UserGroup, PinnedChart, EvaluatedTask, UserDashboard, ChartVisualizerStyle } from '../core/types';
 import { calculateConsistencyRating, evaluateTaskProgress } from '../core/math';
 import { getOperationalDate, isTaskScheduledForDate, filterEventsForTaskCadence } from '../core/recurrence';
 import { getChartRecommendations, createPinnedChartFromRecommendation, ChartRecommendation } from '../services/ai-suggestions';
@@ -25,6 +25,7 @@ export function useLayaTracker() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CompletionEvent[]>([]);
   const [pinnedCharts, setPinnedCharts] = useState<PinnedChart[]>([]);
+  const [dashboards, setDashboards] = useState<UserDashboard[]>([]);
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -36,6 +37,7 @@ export function useLayaTracker() {
     setGroups(data.groups);
     setTasks(data.tasks);
     setEvents(data.events);
+    setDashboards(data.dashboards);
     const valid = data.pinnedCharts.filter((c) => data.tasks.some((t) => t.id === c.taskId && !t.deletedAt));
     if (valid.length !== data.pinnedCharts.length) await StorageService.savePinnedCharts(valid, uid);
     setPinnedCharts(valid);
@@ -152,12 +154,17 @@ export function useLayaTracker() {
     await StorageService.savePinnedCharts(nextList, activeUserId);
   };
 
-  const handlePinTaskChart = async (taskId: string) => {
+  const handlePinTaskChart = async (taskId: string, chartType?: ChartVisualizerStyle, dashboardId?: string) => {
     const task = tasks.find((t) => t.id === taskId);
-    const chartType = task?.targetAmount ? 'volume_bars' : 'progress_trend';
-    const nextList: PinnedChart[] = [...pinnedCharts, { id: generateUUID(), taskId, chartType, sortOrder: pinnedCharts.length }];
+    const resolvedType: ChartVisualizerStyle = chartType || (task?.targetAmount ? 'volume_bars' : 'activity_heatmap');
+    const nextList: PinnedChart[] = [...pinnedCharts, { id: generateUUID('chr'), taskId, dashboardId, chartType: resolvedType, sortOrder: pinnedCharts.length }];
     setPinnedCharts(nextList);
     await StorageService.savePinnedCharts(nextList, activeUserId);
+  };
+
+  const handleCreateDashboard = async (dash: UserDashboard) => {
+    await StorageService.saveDashboard(dash, activeUserId);
+    setDashboards((prev) => [...prev, dash]);
   };
 
   const handleMoveChart = async (chartId: string, direction: 'up' | 'down') => {
@@ -220,6 +227,7 @@ export function useLayaTracker() {
     loading, session, setSession, profile, setProfile, handleUpdateProfile,
     isAuthSkipped, setIsAuthSkipped, isOnline, isSyncing, triggerSync, opInfo,
     activeGroupId, setActiveGroupId, groups, tasks, events,
+    dashboards, handleCreateDashboard,
     pinnedCharts, validPinnedCharts, remainingTasks, completedOrRestedTasks, consistencyScore,
     chartRecommendations, handleToggleComplete, handleToggleMilestone,
     handleSkipMilestone, handleUpdateQuantified, handleSetQuantifiedExact,

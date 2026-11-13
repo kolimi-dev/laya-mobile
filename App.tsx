@@ -134,7 +134,9 @@ function MainApp() {
             pinnedCharts={tracker.pinnedCharts}
             tasks={tracker.tasks}
             events={tracker.events}
+            dashboards={tracker.dashboards}
             groups={tracker.groups}
+            onCreateDashboard={tracker.handleCreateDashboard}
             onPinChart={tracker.handlePinTaskChart}
             onMoveChart={tracker.handleMoveChart}
             onRemoveChart={tracker.handleRemoveChart}
