@@ -1,0 +1,11 @@
+{
+  "latestVersion": "1.1.0",
+  "apkUrl": "https://github.com/kolimi-dev/laya-mobile/releases/download/v1.1.0/laya.apk",
+  "releaseNotes": [
+    "User-created custom dashboards with custom icons",
+    "Synchronous time-window selector (7d, 30d, 1y)",
+    "Fixed hollow volume bar tracks with clean benchmark line",
+    "Separated measurement flavors from schedule frequency",
+    "Searchable country code phone picker & sanitized user IDs"
+  ]
+}
