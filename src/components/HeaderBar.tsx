@@ -59,12 +59,9 @@ export const HeaderBar: React.FC<Props> = ({
         </View>
       </View>
 
-      {/* Sub-row: Operational Date & Night Owl Cutoff */}
+      {/* Sub-row: Operational Date */}
       <View style={styles.dateRow}>
         <Text style={styles.dateText}>{formattedDate}</Text>
-        <View style={styles.nightOwlPill}>
-          <Text style={styles.nightOwlText}>Night Owl: 03:00 AM</Text>
-        </View>
       </View>
     </View>
   );
