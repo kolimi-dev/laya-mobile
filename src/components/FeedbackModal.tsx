@@ -52,7 +52,7 @@ export const FeedbackModal: React.FC<Props> = ({ visible, session, onClose }) =>
 
   const opInfo = useMemo(() => getOperationalDate(), []);
 
-  const diagnosticsSummary = `• Laya Native Mobile v1.0.0\n• OS: ${Platform.OS} (v${Platform.Version})\n• Date: ${opInfo.dateString} (Night Owl: 03:00 AM)\n• Privacy: 0 PII, 0 Location, 0 Trackers`;
+  const diagnosticsSummary = `• Laya Native Mobile v1.0.0\n• OS: ${Platform.OS} (v${Platform.Version})\n• Date: ${opInfo.dateString}\n• Privacy: 0 PII, 0 Location, 0 Trackers`;
 
   const handleSubmit = async () => {
     if (!message.trim()) return;
@@ -131,18 +131,20 @@ export const FeedbackModal: React.FC<Props> = ({ visible, session, onClose }) =>
             />
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Contact Email (Optional)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="friend@example.com"
-              placeholderTextColor={colors.textTertiary}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </View>
+          {!session?.email && (
+            <View style={styles.field}>
+              <Text style={styles.label}>Contact Email (Optional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="friend@example.com"
+                placeholderTextColor={colors.textTertiary}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+          )}
 
           <TouchableOpacity
             style={styles.diagnosticsCard}

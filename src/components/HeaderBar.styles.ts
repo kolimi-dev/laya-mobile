@@ -83,19 +83,6 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       fontSize: typography.caption,
       fontWeight: '600',
     },
-    nightOwlPill: {
-      backgroundColor: colors.bgCard,
-      borderWidth: 1,
-      borderColor: colors.borderSubtle,
-      borderRadius: radiuses.full,
-      paddingHorizontal: spacing.xs,
-      paddingVertical: 1,
-    },
-    nightOwlText: {
-      color: colors.textTertiary,
-      fontSize: 10,
-      fontWeight: '500',
-    },
   });
 
 export const styles = getStyles();
