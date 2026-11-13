@@ -1,27 +1,25 @@
 /**
- * Laya (లయ) Mobile — Root Application Coordinator (ADR-0001 through ADR-0012)
+ * Laya (లయ) Mobile — Root Application Coordinator (ADR-0001 through ADR-0013)
  * Natural Cadence, Guilt-Free Habit Engine
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { SafeAreaView, View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView, View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 
+import { CONFIG } from './src/config';
 import { Task } from './src/core/types';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { getStyles } from './App.styles';
 import { useLayaTracker } from './src/hooks/useLayaTracker';
+import { UpdateService, AppUpdateManifest } from './src/services/updates';
 
 import { HeaderBar } from './src/components/HeaderBar';
 import { NavigationDrawer, AppView } from './src/components/NavigationDrawer';
 import { GroupFilterPills } from './src/components/GroupFilterPills';
-import { CreateTaskModal } from './src/components/CreateTaskModal';
 import { ConsentModal } from './src/components/ConsentModal';
-import { ProfileModal } from './src/components/ProfileModal';
-import { OnboardingProfileModal } from './src/components/OnboardingProfileModal';
-import { FeedbackModal } from './src/components/FeedbackModal';
-import { GuideModal } from './src/components/GuideModal';
+import { AppModals } from './src/components/AppModals';
 import { TodayTasksScreen } from './src/screens/TodayTasksScreen';
 import { TaskChartsScreen } from './src/screens/TaskChartsScreen';
 import { NotActiveScreen } from './src/screens/NotActiveScreen';
@@ -37,18 +35,42 @@ function MainApp() {
   const [guideVisible, setGuideVisible] = useState(false);
   const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [privacyVisible, setPrivacyVisible] = useState(false);
   const [consentAgreed, setConsentAgreed] = useState(true);
+
+  // In-app updates & spotlights
+  const [updateManifest, setUpdateManifest] = useState<AppUpdateManifest | null>(null);
+  const [updateModalVisible, setUpdateModalVisible] = useState(false);
+  const [whatsNewVisible, setWhatsNewVisible] = useState(false);
+
   const { theme, colors } = useTheme();
   const styles = getStyles(colors);
 
   useEffect(() => {
     AsyncStorage.getItem('@laya:consent_agreed').then((v) => !v && setConsentAgreed(false));
     AsyncStorage.getItem('@laya:guide_seen').then((s) => !s && setGuideVisible(true));
+
+    async function checkUpdates() {
+      const manifest = await UpdateService.fetchManifest();
+      if (manifest && UpdateService.isNewerVersion(manifest.latestVersion, CONFIG.APP_VERSION)) {
+        setUpdateManifest(manifest);
+        const dismissed = await UpdateService.getDismissedVersion();
+        if (dismissed !== manifest.latestVersion) setUpdateModalVisible(true);
+      } else {
+        const lastSeen = await UpdateService.getLastSeenVersion();
+        if (lastSeen && UpdateService.isNewerVersion(CONFIG.APP_VERSION, lastSeen)) setWhatsNewVisible(true);
+        await UpdateService.setLastSeenVersion(CONFIG.APP_VERSION);
+      }
+    }
+    checkUpdates();
   }, []);
 
   const tracker = useLayaTracker();
 
-  const notActiveCount = useMemo(() => tracker.tasks.filter((t) => !t.deletedAt && (t.archivedAt || (t.lifecycleStatus && t.lifecycleStatus !== 'active'))).length, [tracker.tasks]);
+  const notActiveCount = useMemo(
+    () => tracker.tasks.filter((t) => !t.deletedAt && (t.archivedAt || (t.lifecycleStatus && t.lifecycleStatus !== 'active'))).length,
+    [tracker.tasks]
+  );
   const trashCount = useMemo(() => tracker.tasks.filter((t) => !!t.deletedAt).length, [tracker.tasks]);
 
   if (tracker.loading) {
@@ -85,6 +107,8 @@ function MainApp() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
+      <ConsentModal visible={!consentAgreed} onAgree={() => { AsyncStorage.setItem('@laya:consent_agreed', 'true'); setConsentAgreed(true); }} />
+
       <HeaderBar opInfo={tracker.opInfo} consistencyScore={tracker.consistencyScore} onMenuPress={() => setDrawerVisible(true)} />
 
       <View style={styles.viewSwitchBar}>
@@ -176,40 +200,51 @@ function MainApp() {
         pinnedChartsCount={tracker.validPinnedCharts.length}
         notActiveCount={notActiveCount}
         trashCount={trashCount}
+        updateAvailableVersion={updateManifest?.latestVersion || null}
+        onTriggerUpdate={() => setUpdateModalVisible(true)}
         onOpenGuide={() => setGuideVisible(true)}
         onOpenProfile={() => setProfileVisible(true)}
         onOpenFeedback={() => setFeedbackVisible(true)}
+        onOpenPrivacy={() => setPrivacyVisible(true)}
       />
 
-      <CreateTaskModal
-        visible={modalVisible}
+      <AppModals
+        modalVisible={modalVisible}
         groups={tracker.groups}
-        initialTask={editingTask}
-        onClose={() => { setModalVisible(false); setEditingTask(null); }}
-        onSave={(t) => { tracker.handleSaveNewTask(t); setEditingTask(null); }}
-      />
-      <GuideModal visible={guideVisible} onClose={() => setGuideVisible(false)} />
-      <ProfileModal
-        visible={profileVisible}
+        editingTask={editingTask}
+        onCloseCreateTask={() => { setModalVisible(false); setEditingTask(null); }}
+        onSaveTask={(t) => { tracker.handleSaveNewTask(t); setEditingTask(null); }}
+        guideVisible={guideVisible}
+        onCloseGuide={() => setGuideVisible(false)}
+        profileVisible={profileVisible}
         session={tracker.session}
-        onClose={() => setProfileVisible(false)}
+        onCloseProfile={() => setProfileVisible(false)}
         onOpenGuide={() => setGuideVisible(true)}
         onSaveProfile={tracker.handleUpdateProfile}
         onLogout={tracker.handleLogout}
-      />
-      <FeedbackModal
-        visible={feedbackVisible}
-        session={tracker.session}
-        onClose={() => setFeedbackVisible(false)}
-      />
-      <OnboardingProfileModal
-        visible={onboardingVisible}
-        initialEmail={tracker.session?.email}
-        onComplete={async (name, phone) => {
+        feedbackVisible={feedbackVisible}
+        onCloseFeedback={() => setFeedbackVisible(false)}
+        onboardingVisible={onboardingVisible}
+        onCompleteOnboarding={async (name, phone) => {
           await tracker.handleUpdateProfile({ name, phone });
           setOnboardingVisible(false);
         }}
-        onSkip={() => setOnboardingVisible(false)}
+        onSkipOnboarding={() => setOnboardingVisible(false)}
+        updateModalVisible={updateModalVisible}
+        updateManifest={updateManifest}
+        currentVersion={CONFIG.APP_VERSION}
+        onCloseUpdate={async () => {
+          if (updateManifest) await UpdateService.setDismissedVersion(updateManifest.latestVersion);
+          setUpdateModalVisible(false);
+        }}
+        onUpdateNow={() => {
+          if (updateManifest?.apkUrl) Linking.openURL(updateManifest.apkUrl);
+          setUpdateModalVisible(false);
+        }}
+        whatsNewVisible={whatsNewVisible}
+        onDismissWhatsNew={() => setWhatsNewVisible(false)}
+        privacyVisible={privacyVisible}
+        onClosePrivacy={() => setPrivacyVisible(false)}
       />
     </SafeAreaView>
   );
