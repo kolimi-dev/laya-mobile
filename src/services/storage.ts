@@ -4,7 +4,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Task, CompletionEvent, UserGroup, PinnedChart } from '../core/types';
+import { Task, CompletionEvent, UserGroup, PinnedChart, UserDashboard } from '../core/types';
 
 export function generateUUID(prefix: string = 'id'): string {
   return `${prefix}_${Math.random().toString(36).substring(2, 9)}_${Date.now().toString(36)}`;
@@ -24,6 +24,7 @@ export class StorageService {
       EVENTS: `@laya:${uid}:events`,
       GROUPS: `@laya:${uid}:groups`,
       PINNED_CHARTS: `@laya:${uid}:pinned_charts`,
+      DASHBOARDS: `@laya:${uid}:dashboards`,
     };
   }
 
@@ -32,21 +33,24 @@ export class StorageService {
     tasks: Task[];
     events: CompletionEvent[];
     pinnedCharts: PinnedChart[];
+    dashboards: UserDashboard[];
   }> {
     this.setUserId(userId);
     const keys = this.getKeys(userId);
 
-    const [groupsJson, tasksJson, eventsJson, chartsJson] = await Promise.all([
+    const [groupsJson, tasksJson, eventsJson, chartsJson, dashboardsJson] = await Promise.all([
       AsyncStorage.getItem(keys.GROUPS),
       AsyncStorage.getItem(keys.TASKS),
       AsyncStorage.getItem(keys.EVENTS),
       AsyncStorage.getItem(keys.PINNED_CHARTS),
+      AsyncStorage.getItem(keys.DASHBOARDS),
     ]);
 
     let groups: UserGroup[] = groupsJson ? JSON.parse(groupsJson) : [];
     let tasks: Task[] = tasksJson ? JSON.parse(tasksJson) : [];
     const events: CompletionEvent[] = eventsJson ? JSON.parse(eventsJson) : [];
     const pinnedCharts: PinnedChart[] = chartsJson ? JSON.parse(chartsJson) : [];
+    let dashboards: UserDashboard[] = dashboardsJson ? JSON.parse(dashboardsJson) : [];
 
     // Seed default groups (ADR-0005)
     if (groups.length === 0) {
@@ -55,6 +59,14 @@ export class StorageService {
         { id: `grp_work_${userId}`, userId, name: 'Work', color: '#38BDF8', sortOrder: 2 },
       ];
       await AsyncStorage.setItem(keys.GROUPS, JSON.stringify(groups));
+    }
+
+    // Seed default overview dashboard
+    if (dashboards.length === 0) {
+      dashboards = [
+        { id: `dash_overview_${userId}`, userId, title: 'Overview', icon: '📊', sortOrder: 1, createdAt: new Date().toISOString() },
+      ];
+      await AsyncStorage.setItem(keys.DASHBOARDS, JSON.stringify(dashboards));
     }
 
     // Auto-purge trash older than 30 days (ADR-0011)
@@ -68,7 +80,7 @@ export class StorageService {
       await AsyncStorage.setItem(keys.TASKS, JSON.stringify(tasks));
     }
 
-    return { groups, tasks, events, pinnedCharts };
+    return { groups, tasks, events, pinnedCharts, dashboards };
   }
 
   public static async saveTask(task: Task, userId?: string): Promise<void> {
@@ -151,6 +163,28 @@ export class StorageService {
   public static async savePinnedCharts(charts: PinnedChart[], userId?: string): Promise<void> {
     const keys = this.getKeys(userId);
     await AsyncStorage.setItem(keys.PINNED_CHARTS, JSON.stringify(charts));
+  }
+
+  public static async saveDashboards(dashboards: UserDashboard[], userId?: string): Promise<void> {
+    const keys = this.getKeys(userId);
+    await AsyncStorage.setItem(keys.DASHBOARDS, JSON.stringify(dashboards));
+  }
+
+  public static async saveDashboard(dash: UserDashboard, userId?: string): Promise<void> {
+    const keys = this.getKeys(userId);
+    const raw = await AsyncStorage.getItem(keys.DASHBOARDS);
+    const list: UserDashboard[] = raw ? JSON.parse(raw) : [];
+    const idx = list.findIndex((d) => d.id === dash.id);
+    if (idx >= 0) list[idx] = dash;
+    else list.push(dash);
+    await AsyncStorage.setItem(keys.DASHBOARDS, JSON.stringify(list));
+  }
+
+  public static async deleteDashboard(dashboardId: string, userId?: string): Promise<void> {
+    const keys = this.getKeys(userId);
+    const raw = await AsyncStorage.getItem(keys.DASHBOARDS);
+    const list: UserDashboard[] = raw ? JSON.parse(raw) : [];
+    await AsyncStorage.setItem(keys.DASHBOARDS, JSON.stringify(list.filter((d) => d.id !== dashboardId)));
   }
 
   public static async saveAllData(
