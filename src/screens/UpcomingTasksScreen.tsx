@@ -25,6 +25,7 @@ export const UpcomingTasksScreen: React.FC<Props> = ({ tasks, groups }) => {
   const horizonDays = useMemo(() => {
     const result: { dateLabel: string; isTomorrow: boolean; tasks: Task[] }[] = [];
     const now = new Date();
+    const seenTaskIds = new Set<string>();
 
     for (let i = 1; i <= 5; i++) {
       const d = new Date(now);
@@ -34,14 +35,18 @@ export const UpcomingTasksScreen: React.FC<Props> = ({ tasks, groups }) => {
       const monthStr = MONTH_NAMES[op.month];
       const label = i === 1 ? `Tomorrow (${dayStr}, ${monthStr} ${op.dayOfMonth})` : `In ${i} days (${dayStr}, ${monthStr} ${op.dayOfMonth})`;
 
-      // Only include non-daily tasks or tasks specifically scheduled for this day
+      // Each habit appears only once at its earliest next scheduled occurrence
       const scheduledTasks = tasks.filter((t) => {
         if (t.deletedAt || t.archivedAt || (t.lifecycleStatus && t.lifecycleStatus !== 'active')) return false;
-        if (t.frequency === 'daily') return false; // Exclude daily habits from upcoming radar
+        if (t.frequency === 'daily') return false; // Daily habits handled in active daily rhythm
+        if (seenTaskIds.has(t.id)) return false;
         return isTaskScheduledForDate(t, op);
       });
 
       if (scheduledTasks.length > 0) {
+        for (const t of scheduledTasks) {
+          seenTaskIds.add(t.id);
+        }
         result.push({ dateLabel: label, isTomorrow: i === 1, tasks: scheduledTasks });
       }
     }
@@ -133,3 +138,4 @@ const getStyles = (colors: ColorPalette = darkColors) =>
     groupPillText: { fontSize: 9, fontWeight: '600' },
     frequencyTag: { color: colors.textTertiary, fontSize: 10, textTransform: 'capitalize' },
   });
+

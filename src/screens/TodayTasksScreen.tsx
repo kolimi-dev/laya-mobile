@@ -80,10 +80,10 @@ export const TodayTasksScreen: React.FC<Props> = ({
 
   return (
     <View style={styles.container}>
-      {/* Top Bucket: Remaining Today */}
+      {/* Top Bucket: Remaining Tasks */}
       <View style={styles.bucketHeader}>
         <View style={[styles.bucketDot, { backgroundColor: colors.warning }]} />
-        <Text style={styles.bucketTitle}>Remaining Today ({remainingTasks.length})</Text>
+        <Text style={styles.bucketTitle}>Remaining ({remainingTasks.length})</Text>
       </View>
 
       {remainingTasks.length === 0 ? (
