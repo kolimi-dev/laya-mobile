@@ -1,18 +1,20 @@
 /**
- * Laya (లయ) Mobile — Task Charts & Custom Dashboards Screen (ADR-0004, ADR-0012, Phase C)
- * User-Created Dashboards, Per-Dashboard Time Window, Deterministic Visualizers
+ * Laya (లయ) Mobile — Task Charts & Custom Dashboards Screen (ADR-0004, ADR-0012, ADR-0015)
+ * Dashboard Dropdown Selector, Pinning Default Dashboard, Time-Window Cache
  */
 
-import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
-import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
 import { PinnedChart, Task, CompletionEvent, UserDashboard, UserGroup, TimeWindow, ChartVisualizerStyle } from '../core/types';
 import { filterEventsByTimeWindow } from '../core/recurrence';
 import { ChartBlock } from '../components/ChartBlock';
 import { TimeWindowSelector } from '../components/TimeWindowSelector';
 import { CreateDashboardModal } from '../components/CreateDashboardModal';
 import { AddChartModal } from '../components/AddChartModal';
+import { DashboardPickerModal } from '../components/DashboardPickerModal';
+import { getStyles } from './TaskChartsScreen.styles';
 
 interface Props {
   pinnedCharts: PinnedChart[];
@@ -20,6 +22,7 @@ interface Props {
   events: CompletionEvent[];
   dashboards: UserDashboard[];
   groups: UserGroup[];
+  initialDashboardId?: string;
   onCreateDashboard: (dash: UserDashboard) => void;
   onPinChart: (taskId: string, style?: ChartVisualizerStyle, dashboardId?: string) => void;
   onMoveChart: (chartId: string, direction: 'up' | 'down') => void;
@@ -31,6 +34,7 @@ export const TaskChartsScreen: React.FC<Props> = ({
   tasks,
   events,
   dashboards,
+  initialDashboardId,
   onCreateDashboard,
   onPinChart,
   onMoveChart,
@@ -39,10 +43,38 @@ export const TaskChartsScreen: React.FC<Props> = ({
   const { colors } = useTheme();
   const styles = getStyles(colors);
 
-  const [activeDashId, setActiveDashId] = useState<string>(dashboards[0]?.id || 'dash_default');
+  const [activeDashId, setActiveDashId] = useState<string>(initialDashboardId || dashboards[0]?.id || 'dash_default');
+  const [defaultDashId, setDefaultDashId] = useState<string>(dashboards[0]?.id || 'dash_default');
   const [timeWindow, setTimeWindow] = useState<TimeWindow>('7d');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [createDashOpen, setCreateDashOpen] = useState(false);
   const [addChartOpen, setAddChartOpen] = useState(false);
+
+  useEffect(() => {
+    if (initialDashboardId) setActiveDashId(initialDashboardId);
+  }, [initialDashboardId]);
+
+  useEffect(() => {
+    AsyncStorage.getItem('@laya:default_dashboard_id').then((id) => {
+      if (id && dashboards.some((d) => d.id === id)) {
+        setDefaultDashId(id);
+        if (!initialDashboardId) setActiveDashId(id);
+      }
+    });
+    AsyncStorage.getItem('@laya:selected_timewindow').then((tw) => {
+      if (tw) setTimeWindow(tw as TimeWindow);
+    });
+  }, [dashboards, initialDashboardId]);
+
+  const handleSetTimeWindow = (tw: TimeWindow) => {
+    setTimeWindow(tw);
+    AsyncStorage.setItem('@laya:selected_timewindow', tw);
+  };
+
+  const handleSetDefaultDashboard = (id: string) => {
+    setDefaultDashId(id);
+    AsyncStorage.setItem('@laya:default_dashboard_id', id);
+  };
 
   const activeDashboard = dashboards.find((d) => d.id === activeDashId) || dashboards[0] || {
     id: 'dash_default',
@@ -61,50 +93,35 @@ export const TaskChartsScreen: React.FC<Props> = ({
     });
   }, [pinnedCharts, tasks, activeDashId]);
 
-  const windowEvents = useMemo(() => {
-    return filterEventsByTimeWindow(events, timeWindow);
-  }, [events, timeWindow]);
+  const windowEvents = useMemo(() => filterEventsByTimeWindow(events, timeWindow), [events, timeWindow]);
 
   return (
     <View style={styles.container}>
-      {/* User Dashboards Horizontal Bar */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dashRow}>
-        {dashboards.map((dash) => {
-          const isActive = activeDashId === dash.id;
-          return (
-            <TouchableOpacity
-              key={dash.id}
-              style={[styles.dashPill, isActive && styles.dashPillActive]}
-              onPress={() => setActiveDashId(dash.id)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.dashIcon}>{dash.icon || '📊'}</Text>
-              <Text style={[styles.dashText, isActive && styles.dashTextActive]}>{dash.title}</Text>
-            </TouchableOpacity>
-          );
-        })}
+      {/* Top Dashboard Dropdown Selector & + New Button */}
+      <View style={styles.topSelectorRow}>
+        <TouchableOpacity style={styles.dropdownBtn} onPress={() => setPickerOpen(true)} activeOpacity={0.7}>
+          <Text style={styles.dropdownIcon}>{activeDashboard.icon || '📊'}</Text>
+          <Text style={styles.dropdownTitle}>{activeDashboard.title}</Text>
+          {activeDashId === defaultDashId && <Text style={styles.defaultBadge}>📌</Text>}
+          <Text style={styles.dropdownChevron}>▾</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity style={styles.newDashBtn} onPress={() => setCreateDashOpen(true)} activeOpacity={0.7}>
           <Text style={styles.newDashText}>+ New</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
 
-      {/* Top Time-Window Selector */}
-      <TimeWindowSelector selected={timeWindow} onChange={setTimeWindow} />
+      <TimeWindowSelector selected={timeWindow} onChange={handleSetTimeWindow} />
 
-      {/* Dashboard Header Bar */}
       <View style={styles.dashHeaderBar}>
         <View style={styles.dashTitleWrap}>
-          <Text style={styles.dashMainTitle}>{activeDashboard.icon} {activeDashboard.title}</Text>
-          <Text style={styles.dashCount}>{dashboardCharts.length} Charts</Text>
+          <Text style={styles.dashCount}>{dashboardCharts.length} Charts in this view</Text>
         </View>
-
         <TouchableOpacity style={styles.addChartBtn} onPress={() => setAddChartOpen(true)} activeOpacity={0.7}>
           <Text style={styles.addChartText}>+ Add Chart</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Pinned Dashboard Charts */}
       {dashboardCharts.length === 0 ? (
         <View style={styles.emptyCard}>
           <Text style={styles.emptyTitle}>0 Charts in this Dashboard</Text>
@@ -134,6 +151,17 @@ export const TaskChartsScreen: React.FC<Props> = ({
         })
       )}
 
+      <DashboardPickerModal
+        visible={pickerOpen}
+        dashboards={dashboards}
+        activeDashboardId={activeDashId}
+        defaultDashboardId={defaultDashId}
+        onSelectDashboard={setActiveDashId}
+        onSetDefaultDashboard={handleSetDefaultDashboard}
+        onOpenCreateDashboard={() => setCreateDashOpen(true)}
+        onClose={() => setPickerOpen(false)}
+      />
+
       <CreateDashboardModal
         visible={createDashOpen}
         onClose={() => setCreateDashOpen(false)}
@@ -153,71 +181,3 @@ export const TaskChartsScreen: React.FC<Props> = ({
     </View>
   );
 };
-
-const getStyles = (colors: ColorPalette = darkColors) =>
-  StyleSheet.create({
-    container: { paddingBottom: spacing.xxl },
-    dashRow: { flexDirection: 'row', gap: spacing.xs, marginBottom: spacing.xs },
-    dashPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: colors.bgCard,
-      borderColor: colors.borderSubtle,
-      borderWidth: 1,
-      borderRadius: radiuses.full,
-      paddingHorizontal: spacing.md,
-      paddingVertical: 6,
-    },
-    dashPillActive: { backgroundColor: colors.bgActive, borderColor: colors.borderStrong },
-    dashIcon: { fontSize: 14 },
-    dashText: { color: colors.textSecondary, fontSize: typography.caption, fontWeight: '500' },
-    dashTextActive: { color: colors.textPrimary, fontWeight: '700' },
-    newDashBtn: {
-      backgroundColor: colors.bgInput,
-      borderColor: colors.borderSubtle,
-      borderWidth: 1,
-      borderRadius: radiuses.full,
-      paddingHorizontal: spacing.md,
-      paddingVertical: 6,
-      justifyContent: 'center',
-    },
-    newDashText: { color: colors.primary, fontSize: typography.caption, fontWeight: '600' },
-    dashHeaderBar: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: spacing.sm,
-      marginBottom: spacing.xs,
-    },
-    dashTitleWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    dashMainTitle: { color: colors.textPrimary, fontSize: typography.subheading, fontWeight: '700' },
-    dashCount: { color: colors.textTertiary, fontSize: typography.caption },
-    addChartBtn: {
-      backgroundColor: colors.primary,
-      paddingHorizontal: spacing.md,
-      paddingVertical: 6,
-      borderRadius: radiuses.sm,
-    },
-    addChartText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
-    emptyCard: {
-      backgroundColor: colors.bgCard,
-      borderWidth: 1,
-      borderColor: colors.borderSubtle,
-      borderRadius: radiuses.lg,
-      padding: spacing.xl,
-      alignItems: 'center',
-      gap: 6,
-      marginTop: spacing.sm,
-    },
-    emptyTitle: { color: colors.textPrimary, fontSize: typography.heading, fontWeight: '600' },
-    emptySubtext: { color: colors.textTertiary, fontSize: typography.caption, textAlign: 'center', lineHeight: 18 },
-    addFirstBtn: {
-      backgroundColor: colors.primary,
-      marginTop: spacing.md,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.sm,
-      borderRadius: radiuses.md,
-    },
-    addFirstText: { color: '#FFFFFF', fontSize: typography.body, fontWeight: '700' },
-  });
