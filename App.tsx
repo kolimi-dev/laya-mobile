@@ -1,6 +1,6 @@
 /**
- * Laya (లయ) Mobile — Root Application Coordinator (ADR-0001 through ADR-0013)
- * Natural Cadence, Guilt-Free Habit Engine
+ * Laya (లయ) Mobile — Root Application Coordinator (ADR-0001 through ADR-0015)
+ * Natural Cadence, Guilt-Free Habit Engine, Retroactive Check-in & Horizon View
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -17,10 +17,12 @@ import { UpdateService, AppUpdateManifest } from './src/services/updates';
 
 import { HeaderBar } from './src/components/HeaderBar';
 import { NavigationDrawer, AppView } from './src/components/NavigationDrawer';
+import { DayNavigator, HorizonMode } from './src/components/DayNavigator';
 import { GroupFilterPills } from './src/components/GroupFilterPills';
 import { ConsentModal } from './src/components/ConsentModal';
 import { AppModals } from './src/components/AppModals';
 import { TodayTasksScreen } from './src/screens/TodayTasksScreen';
+import { UpcomingTasksScreen } from './src/screens/UpcomingTasksScreen';
 import { TaskChartsScreen } from './src/screens/TaskChartsScreen';
 import { NotActiveScreen } from './src/screens/NotActiveScreen';
 import { TrashScreen } from './src/screens/TrashScreen';
@@ -28,6 +30,7 @@ import { LoginScreen } from './src/screens/LoginScreen';
 
 function MainApp() {
   const [activeView, setActiveView] = useState<AppView>('tasks');
+  const [horizonMode, setHorizonMode] = useState<HorizonMode>('day');
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -75,9 +78,7 @@ function MainApp() {
 
   if (tracker.loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
     );
   }
 
@@ -86,10 +87,7 @@ function MainApp() {
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="light" />
         <LoginScreen
-          onLoginSuccess={(s) => {
-            tracker.setSession(s);
-            if (!tracker.profile.name) setOnboardingVisible(true);
-          }}
+          onLoginSuccess={(s) => { tracker.setSession(s); if (!tracker.profile.name) setOnboardingVisible(true); }}
           onSkipOffline={() => tracker.setIsAuthSkipped(true)}
         />
         <ConsentModal visible={!consentAgreed} onAgree={() => { AsyncStorage.setItem('@laya:consent_agreed', 'true'); setConsentAgreed(true); }} />
@@ -108,36 +106,37 @@ function MainApp() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <ConsentModal visible={!consentAgreed} onAgree={() => { AsyncStorage.setItem('@laya:consent_agreed', 'true'); setConsentAgreed(true); }} />
-
       <HeaderBar opInfo={tracker.opInfo} consistencyScore={tracker.consistencyScore} onMenuPress={() => setDrawerVisible(true)} />
 
-      <View style={styles.viewSwitchBar}>
-        {activeView === 'tasks' || activeView === 'charts' ? (
-          <View style={styles.segmentedControl}>
-            <TouchableOpacity style={[styles.segmentBtn, activeView === 'tasks' && styles.segmentBtnActive]} onPress={() => setActiveView('tasks')}>
-              <Text style={[styles.segmentText, activeView === 'tasks' && styles.segmentTextActive]}>Today ({tracker.remainingTasks.length})</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.segmentBtn, activeView === 'charts' && styles.segmentBtnActive]} onPress={() => setActiveView('charts')}>
-              <Text style={[styles.segmentText, activeView === 'charts' && styles.segmentTextActive]}>Charts ({tracker.pinnedCharts.length})</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity onPress={() => setActiveView('tasks')} activeOpacity={0.7}>
-            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>← Today's Rhythm</Text>
-          </TouchableOpacity>
-        )}
-
-        <TouchableOpacity style={styles.addBtn} onPress={() => { setEditingTask(null); setModalVisible(true); }}>
-          <Text style={styles.addBtnText}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
-
       {activeView === 'tasks' && (
-        <GroupFilterPills groups={tracker.groups} activeGroupId={tracker.activeGroupId} onSelectGroup={tracker.setActiveGroupId} />
+        <DayNavigator
+          currentOffset={tracker.activeDateOffset}
+          opInfo={tracker.opInfo}
+          horizonMode={horizonMode}
+          onSelectOffset={tracker.setActiveDateOffset}
+          onToggleHorizon={setHorizonMode}
+        />
+      )}
+
+      {activeView === 'charts' && (
+        <TouchableOpacity style={styles.backToTasksBtn} onPress={() => setActiveView('tasks')} activeOpacity={0.7}>
+          <Text style={styles.backToTasksText}>← Back to Today's Rhythm</Text>
+        </TouchableOpacity>
+      )}
+
+      {activeView === 'tasks' && horizonMode === 'day' && (
+        <View style={styles.filterActionRow}>
+          <View style={{ flex: 1 }}>
+            <GroupFilterPills groups={tracker.groups} activeGroupId={tracker.activeGroupId} onSelectGroup={tracker.setActiveGroupId} />
+          </View>
+          <TouchableOpacity style={styles.addHabitBtn} onPress={() => { setEditingTask(null); setModalVisible(true); }}>
+            <Text style={styles.addHabitText}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {activeView === 'tasks' && (
+        {activeView === 'tasks' && horizonMode === 'day' && (
           <TodayTasksScreen
             remainingTasks={tracker.remainingTasks}
             completedOrRestedTasks={tracker.completedOrRestedTasks}
@@ -151,7 +150,11 @@ function MainApp() {
             onToggleIgnore={tracker.handleToggleIgnore}
             onEditTask={(t) => { setEditingTask(t); setModalVisible(true); }}
             onDeleteTask={confirmDelete}
+            onOpenFeedback={() => setFeedbackVisible(true)}
           />
+        )}
+        {activeView === 'tasks' && horizonMode === 'upcoming' && (
+          <UpcomingTasksScreen tasks={tracker.tasks} groups={tracker.groups} />
         )}
         {activeView === 'charts' && (
           <TaskChartsScreen
@@ -190,7 +193,7 @@ function MainApp() {
         visible={drawerVisible}
         onClose={() => setDrawerVisible(false)}
         activeView={activeView}
-        onSelectView={(v) => setActiveView(v)}
+        onSelectView={(v) => { setHorizonMode('day'); setActiveView(v); }}
         session={tracker.session}
         profileName={tracker.profile.name}
         isOnline={tracker.isOnline}
@@ -225,10 +228,7 @@ function MainApp() {
         feedbackVisible={feedbackVisible}
         onCloseFeedback={() => setFeedbackVisible(false)}
         onboardingVisible={onboardingVisible}
-        onCompleteOnboarding={async (name, phone) => {
-          await tracker.handleUpdateProfile({ name, phone });
-          setOnboardingVisible(false);
-        }}
+        onCompleteOnboarding={async (name, phone) => { await tracker.handleUpdateProfile({ name, phone }); setOnboardingVisible(false); }}
         onSkipOnboarding={() => setOnboardingVisible(false)}
         updateModalVisible={updateModalVisible}
         updateManifest={updateManifest}
