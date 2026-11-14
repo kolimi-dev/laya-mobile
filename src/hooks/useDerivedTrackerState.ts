@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import { Task, CompletionEvent, PinnedChart, EvaluatedTask } from '../core/types';
 import { calculateConsistencyRating, evaluateTaskProgress } from '../core/math';
-import { isTaskScheduledForDate, filterEventsForTaskCadence, OperationalDateInfo } from '../core/recurrence';
+import { isTaskScheduledForDate, filterEventsForTaskCadence, getOperationalDate, OperationalDateInfo } from '../core/recurrence';
 import { getChartRecommendations } from '../services/ai-suggestions';
 
 interface UseDerivedTrackerStateParams {
@@ -45,12 +45,20 @@ export function useDerivedTrackerState({
     let scheduled = 0;
     let ignored = 0;
     for (const t of evaluatedTasks) {
+      const isBackfillPreCreation =
+        !!t.task.createdAt &&
+        opInfo.dateString < getOperationalDate(new Date(t.task.createdAt)).dateString;
+
+      if (isBackfillPreCreation && !t.isCompleted && t.percentage === 0) {
+        continue;
+      }
+
       scheduled += 100;
       if (t.isIgnored) ignored += 100;
       else completed += t.percentage;
     }
     return calculateConsistencyRating(completed, scheduled, ignored);
-  }, [evaluatedTasks]);
+  }, [evaluatedTasks, opInfo]);
 
   const chartRecommendations = useMemo(
     () => getChartRecommendations(tasks, pinnedCharts),

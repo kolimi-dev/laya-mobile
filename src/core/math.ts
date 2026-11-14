@@ -15,9 +15,12 @@ export function calculateConsistencyRating(
   scheduledPoints: number,
   ignoredPoints: number
 ): number {
+  if (scheduledPoints <= 0) {
+    return 0;
+  }
   const effectiveDenominator = scheduledPoints - ignoredPoints;
   if (effectiveDenominator <= 0) {
-    return 100; // Zero guilt on full rest or zero scheduled
+    return 100; // Zero guilt on full rest
   }
   const rating = (completedPoints / effectiveDenominator) * 100;
   return Math.min(100, Math.max(0, Math.round(rating)));

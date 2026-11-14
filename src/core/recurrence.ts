@@ -6,6 +6,13 @@
 import { Task, CompletionEvent, TimeWindow } from './types';
 
 export const NIGHT_OWL_OFFSET_HOURS = 3; // 03:00 AM
+export const GUILT_FREE_BACKFILL_DAYS = 7;
+
+export function getOperationalDayDifference(laterDateStr: string, earlierDateStr: string): number {
+  const d1 = new Date(laterDateStr + 'T12:00:00Z');
+  const d2 = new Date(earlierDateStr + 'T12:00:00Z');
+  return Math.round((d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
+}
 
 export interface OperationalDateInfo {
   date: Date;
@@ -58,11 +65,14 @@ export function isTaskScheduledForDate(
 ): boolean {
   if (task.archivedAt || task.deletedAt) return false;
 
-  // Do not schedule tasks on dates prior to their creation operational day
+  // Allow new habits to be backfilled for past 7 days prior to their creation operational day
   if (task.createdAt) {
     const createdOp = getOperationalDate(new Date(task.createdAt));
     if (opInfo.dateString < createdOp.dateString) {
-      return false;
+      const diffDays = getOperationalDayDifference(createdOp.dateString, opInfo.dateString);
+      if (diffDays > GUILT_FREE_BACKFILL_DAYS) {
+        return false;
+      }
     }
   }
 
@@ -91,9 +101,8 @@ export function isTaskScheduledForDate(
     case 'custom':
       if (task.intervalDays && task.intervalDays > 1) {
         const createdOp = getOperationalDate(new Date(task.createdAt));
-        const diffMs = opInfo.date.getTime() - createdOp.date.getTime();
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        return diffDays >= 0 && diffDays % task.intervalDays === 0;
+        const diffDays = Math.abs(getOperationalDayDifference(createdOp.dateString, opInfo.dateString));
+        return diffDays % task.intervalDays === 0;
       }
       return true;
     case 'anytime':
