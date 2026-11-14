@@ -22,12 +22,8 @@ interface Props {
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const PAST_QUOTES = [
-  '"Yesterday is carved in stone, today is written in water."',
-  '"One can rearrange the footprints, but not the road traveled."',
-  '"The manuscript remembers what the clock has forgotten."',
-  '"You can change your records, but not your past. Forgive yesterday; breathe today."',
-];
+const YESTERDAY_QUOTE = '"Yesterday is carved in stone, today is written in water."';
+const PAST_REFLECTION_QUOTE = '"One can rearrange the footprints, but not the road traveled."';
 
 export const DayNavigator: React.FC<Props> = ({
   currentOffset,
@@ -48,10 +44,8 @@ export const DayNavigator: React.FC<Props> = ({
   }, [currentOffset, opInfo]);
 
   const philosophicalQuote = useMemo(() => {
-    if (currentOffset < 0) {
-      const idx = (Math.abs(currentOffset) - 1) % PAST_QUOTES.length;
-      return PAST_QUOTES[idx];
-    }
+    if (currentOffset === -1) return YESTERDAY_QUOTE;
+    if (currentOffset < -1) return PAST_REFLECTION_QUOTE;
     return null;
   }, [currentOffset]);
 
