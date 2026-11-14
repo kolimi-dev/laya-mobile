@@ -37,6 +37,7 @@ export const TaskChartsScreen: React.FC<Props> = ({
   tasks,
   events,
   dashboards,
+  groups = [],
   initialDashboardId,
   onCreateDashboard,
   onUpdateDashboard,
@@ -210,6 +211,7 @@ export const TaskChartsScreen: React.FC<Props> = ({
         visible={addChartOpen}
         dashboardTitle={activeDashboard.title}
         tasks={tasks}
+        groups={groups}
         onClose={() => setAddChartOpen(false)}
         onAddChart={(taskId, style) => onPinChart(taskId, style, activeDashId)}
       />
