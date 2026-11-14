@@ -9,6 +9,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { ColorPalette, darkColors, spacing, radiuses } from '../../theme/tokens';
 import { Task, CompletionEvent } from '../../core/types';
 import { getOperationalDate } from '../../core/recurrence';
+import { evaluateTaskProgress } from '../../core/math';
 
 interface Props {
   task: Task;
@@ -29,13 +30,16 @@ export const ActivityHeatmapVisualizer: React.FC<Props> = ({ task, events, daysC
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const op = getOperationalDate(d);
-      const ev = events.find((e) => getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString);
+      const dayEvents = events.filter(
+        (e) => (e.taskId === task.id || !e.taskId) && getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString
+      );
+      const evaluated = evaluateTaskProgress(task, dayEvents);
 
-      if (ev?.status === 'completed' || (ev?.quantifiedValue && ev.quantifiedValue >= (task.targetAmount || 1))) {
+      if (evaluated.isCompleted) {
         result.push({ dateStr: op.dateString, status: 'completed' });
-      } else if (ev?.status === 'ignored') {
+      } else if (evaluated.isIgnored) {
         result.push({ dateStr: op.dateString, status: 'ignored' });
-      } else if (ev && (ev.percentage || ev.quantifiedValue)) {
+      } else if (evaluated.percentage > 0 || (evaluated.quantifiedValue && evaluated.quantifiedValue > 0)) {
         result.push({ dateStr: op.dateString, status: 'in_progress' });
       } else {
         result.push({ dateStr: op.dateString, status: 'none' });

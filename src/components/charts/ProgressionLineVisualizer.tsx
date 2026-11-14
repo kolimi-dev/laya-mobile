@@ -10,6 +10,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { ColorPalette, darkColors, spacing, typography } from '../../theme/tokens';
 import { Task, CompletionEvent } from '../../core/types';
 import { getOperationalDate } from '../../core/recurrence';
+import { evaluateTaskProgress } from '../../core/math';
 
 interface Props {
   task: Task;
@@ -29,8 +30,11 @@ export const ProgressionLineVisualizer: React.FC<Props> = ({ task, events, daysC
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const op = getOperationalDate(d);
-      const match = events.find((e) => getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString);
-      raw.push(match?.quantifiedValue || (match?.status === 'completed' ? (task.targetAmount || 1) : 0));
+      const dayEvents = events.filter(
+        (e) => (e.taskId === task.id || !e.taskId) && getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString
+      );
+      const evaluated = evaluateTaskProgress(task, dayEvents);
+      raw.push(evaluated.quantifiedValue || (evaluated.isCompleted ? (task.targetAmount || 1) : 0));
     }
 
     const max = Math.max(...raw, task.targetAmount || 1, 1);

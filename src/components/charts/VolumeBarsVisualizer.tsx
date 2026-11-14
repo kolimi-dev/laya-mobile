@@ -10,6 +10,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { ColorPalette, darkColors, spacing, radiuses, typography } from '../../theme/tokens';
 import { Task, CompletionEvent } from '../../core/types';
 import { getOperationalDate } from '../../core/recurrence';
+import { evaluateTaskProgress } from '../../core/math';
 
 interface Props {
   task: Task;
@@ -30,14 +31,15 @@ export const VolumeBarsVisualizer: React.FC<Props> = ({ task, events, daysCount 
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const op = getOperationalDate(d);
-      const match = events.find(
-        (e) => getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString
+      const dayEvents = events.filter(
+        (e) => (e.taskId === task.id || !e.taskId) && getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString
       );
-      const val = match?.quantifiedValue || 0;
+      const evaluated = evaluateTaskProgress(task, dayEvents);
+      const val = evaluated.isIgnored ? 0 : (evaluated.quantifiedValue || (evaluated.isCompleted ? (task.targetAmount || 1) : 0));
       const target = task.targetAmount || 1;
-      const pct = Math.min(100, Math.round((val / target) * 100));
+      const pct = evaluated.isIgnored ? 0 : evaluated.percentage;
       const label = daysCount <= 7 ? dayNames[op.dayOfWeek] : `${op.dayOfMonth}`;
-      result.push({ dateStr: op.dateString, label, val, pct, isDone: pct >= 100 });
+      result.push({ dateStr: op.dateString, label, val, pct, isDone: evaluated.isCompleted });
     }
     return result;
   }, [events, task, daysCount]);

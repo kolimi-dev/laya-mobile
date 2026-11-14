@@ -10,6 +10,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { ColorPalette, darkColors, spacing, radiuses, typography } from '../../theme/tokens';
 import { Task, CompletionEvent } from '../../core/types';
 import { getOperationalDate } from '../../core/recurrence';
+import { evaluateTaskProgress } from '../../core/math';
 
 interface Props {
   task: Task;
@@ -32,12 +33,15 @@ export const ContinuityRingVisualizer: React.FC<Props> = ({ task, events, daysCo
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const op = getOperationalDate(d);
-      const ev = events.find((e) => getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString);
+      const dayEvents = events.filter(
+        (e) => (e.taskId === task.id || !e.taskId) && getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString
+      );
+      const evaluated = evaluateTaskProgress(task, dayEvents);
 
-      if (ev?.status === 'completed' || (ev?.quantifiedValue && ev.quantifiedValue >= (task.targetAmount || 1))) {
+      if (evaluated.isCompleted) {
         completedDays++;
         if (!streakBroken) streak++;
-      } else if (ev?.status === 'ignored') {
+      } else if (evaluated.isIgnored) {
         ignoredDays++;
         // Guilt-free: rest day preserves streak!
       } else {
