@@ -1,19 +1,19 @@
 /**
- * Laya (లయ) Mobile — Root Application Coordinator (ADR-0001 through ADR-0015)
- * Natural Cadence, Guilt-Free Habit Engine, Retroactive Check-in & Horizon View
+ * Laya (లయ) Mobile — Root Application Coordinator (ADR-0001 through ADR-0016)
+ * Natural Cadence, Guilt-Free Habit Engine, Retroactive Check-in & All Habits Catalog
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { SafeAreaView, View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Linking } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useMemo } from 'react';
+import { SafeAreaView, View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 import { CONFIG } from './src/config';
 import { Task } from './src/core/types';
+import { isTaskScheduledForDate } from './src/core/recurrence';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { getStyles } from './App.styles';
 import { useLayaTracker } from './src/hooks/useLayaTracker';
-import { UpdateService, AppUpdateManifest } from './src/services/updates';
+import { useAppUpdates } from './src/hooks/useAppUpdates';
 
 import { HeaderBar } from './src/components/HeaderBar';
 import { NavigationDrawer, AppView } from './src/components/NavigationDrawer';
@@ -21,11 +21,7 @@ import { DayNavigator, HorizonMode } from './src/components/DayNavigator';
 import { GroupFilterPills } from './src/components/GroupFilterPills';
 import { ConsentModal } from './src/components/ConsentModal';
 import { AppModals } from './src/components/AppModals';
-import { TodayTasksScreen } from './src/screens/TodayTasksScreen';
-import { UpcomingTasksScreen } from './src/screens/UpcomingTasksScreen';
-import { TaskChartsScreen } from './src/screens/TaskChartsScreen';
-import { NotActiveScreen } from './src/screens/NotActiveScreen';
-import { TrashScreen } from './src/screens/TrashScreen';
+import { AppScreensView } from './src/components/AppScreensView';
 import { LoginScreen } from './src/screens/LoginScreen';
 
 function MainApp() {
@@ -35,42 +31,22 @@ function MainApp() {
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [manageGroupsVisible, setManageGroupsVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
   const [guideVisible, setGuideVisible] = useState(false);
   const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [privacyVisible, setPrivacyVisible] = useState(false);
-  const [consentAgreed, setConsentAgreed] = useState(true);
-
-  // In-app updates & spotlights
-  const [updateManifest, setUpdateManifest] = useState<AppUpdateManifest | null>(null);
-  const [updateModalVisible, setUpdateModalVisible] = useState(false);
-  const [whatsNewVisible, setWhatsNewVisible] = useState(false);
 
   const { theme, colors } = useTheme();
   const styles = getStyles(colors);
-
-  useEffect(() => {
-    AsyncStorage.getItem('@laya:consent_agreed').then((v) => !v && setConsentAgreed(false));
-    AsyncStorage.getItem('@laya:guide_seen').then((s) => !s && setGuideVisible(true));
-
-    async function checkUpdates() {
-      const manifest = await UpdateService.fetchManifest();
-      if (manifest && UpdateService.isNewerVersion(manifest.latestVersion, CONFIG.APP_VERSION)) {
-        setUpdateManifest(manifest);
-        const dismissed = await UpdateService.getDismissedVersion();
-        if (dismissed !== manifest.latestVersion) setUpdateModalVisible(true);
-      } else {
-        const lastSeen = await UpdateService.getLastSeenVersion();
-        if (lastSeen && UpdateService.isNewerVersion(CONFIG.APP_VERSION, lastSeen)) setWhatsNewVisible(true);
-        await UpdateService.setLastSeenVersion(CONFIG.APP_VERSION);
-      }
-    }
-    checkUpdates();
-  }, []);
-
   const tracker = useLayaTracker();
+  const updates = useAppUpdates(() => setGuideVisible(true));
 
+  const allHabitsCount = useMemo(
+    () => tracker.tasks.filter((t) => !t.deletedAt && !t.archivedAt && (t.lifecycleStatus || 'active') === 'active').length,
+    [tracker.tasks]
+  );
   const notActiveCount = useMemo(
     () => tracker.tasks.filter((t) => !t.deletedAt && (t.archivedAt || (t.lifecycleStatus && t.lifecycleStatus !== 'active'))).length,
     [tracker.tasks]
@@ -78,9 +54,7 @@ function MainApp() {
   const trashCount = useMemo(() => tracker.tasks.filter((t) => !!t.deletedAt).length, [tracker.tasks]);
 
   if (tracker.loading) {
-    return (
-      <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>
-    );
+    return <View style={styles.center}><ActivityIndicator size="large" color={colors.primary} /></View>;
   }
 
   if (!tracker.session && !tracker.isAuthSkipped) {
@@ -91,7 +65,7 @@ function MainApp() {
           onLoginSuccess={(s) => { tracker.setSession(s); if (!tracker.profile.name) setOnboardingVisible(true); }}
           onSkipOffline={() => tracker.setIsAuthSkipped(true)}
         />
-        <ConsentModal visible={!consentAgreed} onAgree={() => { AsyncStorage.setItem('@laya:consent_agreed', 'true'); setConsentAgreed(true); }} />
+        <ConsentModal visible={!updates.consentAgreed} onAgree={updates.handleAgreeConsent} />
       </SafeAreaView>
     );
   }
@@ -103,13 +77,28 @@ function MainApp() {
     ]);
   };
 
+  const handleSaveTaskWithFeedback = async (task: Task) => {
+    await tracker.handleSaveNewTask(task);
+    setEditingTask(null);
+    if (!isTaskScheduledForDate(task, tracker.opInfo)) {
+      Alert.alert(
+        'Habit Created',
+        `"${task.title}" was saved successfully.\n\nSince it's not due today, you can find it in the All Habits Catalog.`,
+        [
+          { text: 'View All Habits', onPress: () => setActiveView('all_habits') },
+          { text: 'OK', style: 'default' },
+        ]
+      );
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
-      <ConsentModal visible={!consentAgreed} onAgree={() => { AsyncStorage.setItem('@laya:consent_agreed', 'true'); setConsentAgreed(true); }} />
+      <ConsentModal visible={!updates.consentAgreed} onAgree={updates.handleAgreeConsent} />
       <HeaderBar opInfo={tracker.opInfo} consistencyScore={tracker.consistencyScore} onMenuPress={() => setDrawerVisible(true)} />
 
-      {activeView === 'tasks' && (
+      {activeView === 'tasks' ? (
         <DayNavigator
           currentOffset={tracker.activeDateOffset}
           opInfo={tracker.opInfo}
@@ -117,9 +106,7 @@ function MainApp() {
           onSelectOffset={tracker.setActiveDateOffset}
           onToggleHorizon={setHorizonMode}
         />
-      )}
-
-      {activeView === 'charts' && (
+      ) : (
         <TouchableOpacity style={styles.backToTasksBtn} onPress={() => setActiveView('tasks')} activeOpacity={0.7}>
           <Text style={styles.backToTasksText}>← Back to Today's Rhythm</Text>
         </TouchableOpacity>
@@ -128,7 +115,12 @@ function MainApp() {
       {activeView === 'tasks' && horizonMode === 'day' && (
         <View style={styles.filterActionRow}>
           <View style={{ flex: 1 }}>
-            <GroupFilterPills groups={tracker.groups} activeGroupId={tracker.activeGroupId} onSelectGroup={tracker.setActiveGroupId} />
+            <GroupFilterPills
+              groups={tracker.groups}
+              activeGroupId={tracker.activeGroupId}
+              onSelectGroup={tracker.setActiveGroupId}
+              onManageGroups={() => setManageGroupsVisible(true)}
+            />
           </View>
           <TouchableOpacity style={styles.addHabitBtn} onPress={() => { setEditingTask(null); setModalVisible(true); }}>
             <Text style={styles.addHabitText}>+ Add</Text>
@@ -136,65 +128,40 @@ function MainApp() {
         </View>
       )}
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {activeView === 'tasks' && horizonMode === 'day' && (
-          <TodayTasksScreen
-            remainingTasks={tracker.remainingTasks}
-            completedOrRestedTasks={tracker.completedOrRestedTasks}
-            groups={tracker.groups}
-            events={tracker.events}
-            dashboards={tracker.dashboards}
-            pinnedCharts={tracker.pinnedCharts}
-            onToggleComplete={tracker.handleToggleComplete}
-            onToggleMilestone={tracker.handleToggleMilestone}
-            onSkipMilestone={tracker.handleSkipMilestone}
-            onUpdateQuantified={tracker.handleUpdateQuantified}
-            onSetQuantifiedExact={tracker.handleSetQuantifiedExact}
-            onToggleIgnore={tracker.handleToggleIgnore}
-            onEditTask={(t) => { setEditingTask(t); setModalVisible(true); }}
-            onDeleteTask={confirmDelete}
-            onNavigateToDashboard={(dashId) => { setSelectedDashboardId(dashId); setActiveView('charts'); }}
-            onOpenFeedback={() => setFeedbackVisible(true)}
-          />
-        )}
-        {activeView === 'tasks' && horizonMode === 'upcoming' && (
-          <UpcomingTasksScreen tasks={tracker.tasks} groups={tracker.groups} />
-        )}
-        {activeView === 'charts' && (
-          <TaskChartsScreen
-            pinnedCharts={tracker.pinnedCharts}
-            tasks={tracker.tasks}
-            events={tracker.events}
-            dashboards={tracker.dashboards}
-            groups={tracker.groups}
-            initialDashboardId={selectedDashboardId}
-            onCreateDashboard={tracker.handleCreateDashboard}
-            onUpdateDashboard={tracker.handleUpdateDashboard}
-            onDeleteDashboard={tracker.handleDeleteDashboard}
-            onPinChart={tracker.handlePinTaskChart}
-            onMoveChart={tracker.handleMoveChart}
-            onRemoveChart={tracker.handleRemoveChart}
-          />
-        )}
-        {activeView === 'not_active' && (
-          <NotActiveScreen
-            tasks={tracker.tasks}
-            groups={tracker.groups}
-            onReactivate={(id) => tracker.handleSetLifecycleStatus(id, 'active')}
-            onSetStatus={(id, s) => tracker.handleSetLifecycleStatus(id, s)}
-            onDeleteToTrash={tracker.handleDeleteTask}
-          />
-        )}
-        {activeView === 'trash' && (
-          <TrashScreen
-            tasks={tracker.tasks}
-            groups={tracker.groups}
-            onRestore={tracker.handleRestoreTask}
-            onPurge={tracker.handlePurgeTask}
-            onEmptyTrash={tracker.handleEmptyTrash}
-          />
-        )}
-      </ScrollView>
+      <AppScreensView
+        activeView={activeView}
+        horizonMode={horizonMode}
+        tasks={tracker.tasks}
+        remainingTasks={tracker.remainingTasks}
+        completedOrRestedTasks={tracker.completedOrRestedTasks}
+        groups={tracker.groups}
+        events={tracker.events}
+        dashboards={tracker.dashboards}
+        pinnedCharts={tracker.pinnedCharts}
+        selectedDashboardId={selectedDashboardId}
+        onToggleComplete={tracker.handleToggleComplete}
+        onToggleMilestone={tracker.handleToggleMilestone}
+        onSkipMilestone={tracker.handleSkipMilestone}
+        onUpdateQuantified={tracker.handleUpdateQuantified}
+        onSetQuantifiedExact={tracker.handleSetQuantifiedExact}
+        onToggleIgnore={tracker.handleToggleIgnore}
+        onEditTask={(t) => { setEditingTask(t); setModalVisible(true); }}
+        onDeleteTask={confirmDelete}
+        onNavigateToDashboard={(dashId) => { setSelectedDashboardId(dashId); setActiveView('charts'); }}
+        onOpenFeedback={() => setFeedbackVisible(true)}
+        onCreateDashboard={tracker.handleCreateDashboard}
+        onUpdateDashboard={tracker.handleUpdateDashboard}
+        onDeleteDashboard={tracker.handleDeleteDashboard}
+        onPinChart={tracker.handlePinTaskChart}
+        onMoveChart={tracker.handleMoveChart}
+        onRemoveChart={tracker.handleRemoveChart}
+        onReactivateTask={(id) => tracker.handleSetLifecycleStatus(id, 'active')}
+        onSetLifecycleStatus={(id, s) => tracker.handleSetLifecycleStatus(id, s)}
+        onRestoreTask={tracker.handleRestoreTask}
+        onPurgeTask={tracker.handlePurgeTask}
+        onEmptyTrash={tracker.handleEmptyTrash}
+        onAddNewTask={() => { setEditingTask(null); setModalVisible(true); }}
+      />
 
       <NavigationDrawer
         visible={drawerVisible}
@@ -208,22 +175,30 @@ function MainApp() {
         onSyncPress={tracker.triggerSync}
         remainingTasksCount={tracker.remainingTasks.length}
         pinnedChartsCount={tracker.validPinnedCharts.length}
+        allHabitsCount={allHabitsCount}
         notActiveCount={notActiveCount}
         trashCount={trashCount}
-        updateAvailableVersion={updateManifest?.latestVersion || null}
-        onTriggerUpdate={() => setUpdateModalVisible(true)}
+        updateAvailableVersion={updates.updateManifest?.latestVersion || null}
+        onTriggerUpdate={() => updates.setUpdateModalVisible(true)}
         onOpenGuide={() => setGuideVisible(true)}
         onOpenProfile={() => setProfileVisible(true)}
         onOpenFeedback={() => setFeedbackVisible(true)}
         onOpenPrivacy={() => setPrivacyVisible(true)}
+        onOpenManageGroups={() => setManageGroupsVisible(true)}
       />
 
       <AppModals
         modalVisible={modalVisible}
         groups={tracker.groups}
+        tasks={tracker.tasks}
         editingTask={editingTask}
         onCloseCreateTask={() => { setModalVisible(false); setEditingTask(null); }}
-        onSaveTask={(t) => { tracker.handleSaveNewTask(t); setEditingTask(null); }}
+        onSaveTask={handleSaveTaskWithFeedback}
+        manageGroupsVisible={manageGroupsVisible}
+        onCloseManageGroups={() => setManageGroupsVisible(false)}
+        onCreateGroup={tracker.handleCreateGroup}
+        onUpdateGroup={tracker.handleUpdateGroup}
+        onDeleteGroup={tracker.handleDeleteGroup}
         guideVisible={guideVisible}
         onCloseGuide={() => setGuideVisible(false)}
         profileVisible={profileVisible}
@@ -237,19 +212,13 @@ function MainApp() {
         onboardingVisible={onboardingVisible}
         onCompleteOnboarding={async (name, phone) => { await tracker.handleUpdateProfile({ name, phone }); setOnboardingVisible(false); }}
         onSkipOnboarding={() => setOnboardingVisible(false)}
-        updateModalVisible={updateModalVisible}
-        updateManifest={updateManifest}
+        updateModalVisible={updates.updateModalVisible}
+        updateManifest={updates.updateManifest}
         currentVersion={CONFIG.APP_VERSION}
-        onCloseUpdate={async () => {
-          if (updateManifest) await UpdateService.setDismissedVersion(updateManifest.latestVersion);
-          setUpdateModalVisible(false);
-        }}
-        onUpdateNow={() => {
-          if (updateManifest?.apkUrl) Linking.openURL(updateManifest.apkUrl);
-          setUpdateModalVisible(false);
-        }}
-        whatsNewVisible={whatsNewVisible}
-        onDismissWhatsNew={() => setWhatsNewVisible(false)}
+        onCloseUpdate={updates.handleCloseUpdate}
+        onUpdateNow={updates.handleUpdateNow}
+        whatsNewVisible={updates.whatsNewVisible}
+        onDismissWhatsNew={() => updates.setWhatsNewVisible(false)}
         privacyVisible={privacyVisible}
         onClosePrivacy={() => setPrivacyVisible(false)}
       />

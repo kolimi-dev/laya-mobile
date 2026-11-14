@@ -20,7 +20,7 @@ import { AuthSession } from '../services/auth';
 import { getStyles, DRAWER_WIDTH } from './NavigationDrawer.styles';
 import { DrawerNavItem } from './DrawerNavItem';
 
-export type AppView = 'tasks' | 'charts' | 'not_active' | 'trash';
+export type AppView = 'tasks' | 'charts' | 'all_habits' | 'not_active' | 'trash';
 
 export interface NavigationDrawerProps {
   visible: boolean;
@@ -34,11 +34,13 @@ export interface NavigationDrawerProps {
   onSyncPress: () => void;
   remainingTasksCount: number;
   pinnedChartsCount: number;
+  allHabitsCount?: number;
   notActiveCount?: number;
   trashCount?: number;
   onOpenGuide: () => void;
   onOpenProfile: () => void;
   onOpenFeedback?: () => void;
+  onOpenManageGroups?: () => void;
   updateAvailableVersion?: string | null;
   onTriggerUpdate?: () => void;
   onOpenPrivacy?: () => void;
@@ -56,11 +58,13 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   onSyncPress,
   remainingTasksCount,
   pinnedChartsCount,
+  allHabitsCount,
   notActiveCount,
   trashCount,
   onOpenGuide,
   onOpenProfile,
   onOpenFeedback,
+  onOpenManageGroups,
   updateAvailableVersion,
   onTriggerUpdate,
   onOpenPrivacy,
@@ -70,9 +74,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   const slideAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
 
   useEffect(() => {
-    if (visible) {
-      Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
-    }
+    if (visible) Animated.timing(slideAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start();
   }, [visible, slideAnim]);
 
   const handleClose = () => {
@@ -81,26 +83,18 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
   };
 
   const handleSupport = () => {
-    Alert.alert(
-      'Support Kolimi',
-      'Kolimi apps are 100% free, private, and ad-free.\n\nSponsor open infrastructure on GitHub Sponsors.',
-      [
-        { text: 'GitHub Sponsors', onPress: () => Linking.openURL('https://github.com/sponsors/kolimi') },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    Alert.alert('Support Kolimi', 'Kolimi apps are 100% free, private, and ad-free.\n\nSponsor open infrastructure on GitHub Sponsors.', [
+      { text: 'GitHub Sponsors', onPress: () => Linking.openURL('https://github.com/sponsors/kolimi') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const handleFeedback = () => {
-    if (onOpenFeedback) {
-      handleClose();
-      onOpenFeedback();
-    } else {
-      Alert.alert('Share Feedback', 'Diagnostics & ideas go directly to feedback@kolimi.dev', [
-        { text: 'Email Developer', onPress: () => Linking.openURL('mailto:feedback@kolimi.dev?subject=Laya%20Feedback') },
-        { text: 'Close', style: 'cancel' },
-      ]);
-    }
+    if (onOpenFeedback) { handleClose(); onOpenFeedback(); return; }
+    Alert.alert('Share Feedback', 'Diagnostics & ideas go directly to feedback@kolimi.dev', [
+      { text: 'Email Developer', onPress: () => Linking.openURL('mailto:feedback@kolimi.dev?subject=Laya%20Feedback') },
+      { text: 'Close', style: 'cancel' },
+    ]);
   };
 
   const email = session?.email || 'guest@offline.local';
@@ -170,6 +164,13 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
               onPress={() => { handleClose(); onSelectView('tasks'); }}
             />
             <DrawerNavItem
+              icon="🗂️"
+              label="All Habits Catalog"
+              isActive={activeView === 'all_habits'}
+              badge={allHabitsCount}
+              onPress={() => { handleClose(); onSelectView('all_habits'); }}
+            />
+            <DrawerNavItem
               icon="📊"
               label="Dashboards & Insights"
               isActive={activeView === 'charts'}
@@ -193,6 +194,9 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
 
             <View style={styles.divider} />
             <Text style={styles.sectionLabel}>Utilities & Preferences</Text>
+            {onOpenManageGroups ? (
+              <DrawerNavItem icon="📁" label="Manage Groups" onPress={() => { handleClose(); onOpenManageGroups(); }} />
+            ) : null}
             <DrawerNavItem icon="📖" label="App Tour & Guide" onPress={() => { handleClose(); onOpenGuide(); }} />
             <DrawerNavItem icon="💬" label="Share Feedback" onPress={handleFeedback} />
             <DrawerNavItem icon="❤️" label="Support Kolimi" onPress={handleSupport} />
@@ -206,13 +210,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
               icon="⏰"
               label="Day Rollover"
               badge="03:00 AM"
-              onPress={() => {
-                Alert.alert(
-                  'Day Rollover Anchor (03:00 AM)',
-                  'Your daily rhythm resets at 03:00 AM instead of midnight so evening habits never reset prematurely.',
-                  [{ text: 'OK' }]
-                );
-              }}
+              onPress={() => Alert.alert('Day Rollover (03:00 AM)', 'Resets at 03:00 AM so evening habits never reset prematurely.')}
             />
             <DrawerNavItem icon="🛡️" label="Privacy & Ethics" onPress={() => { handleClose(); onOpenPrivacy?.(); }} />
             <DrawerNavItem icon="⚙️" label="Kolimi ID Profile" onPress={() => { handleClose(); onOpenProfile(); }} />
