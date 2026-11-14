@@ -110,7 +110,11 @@ export const AllHabitsScreen: React.FC<Props> = ({
                       )}
                       <Text style={styles.cadenceBadge}>{getCadenceLabel(t)}</Text>
                       <Text style={styles.flavorBadge}>
-                        {t.flavor === 'quantified' ? `Target: ${t.targetAmount || 1} ${t.unit || ''}` : t.flavor}
+                        {t.flavor === 'quantified'
+                          ? `Target: ${t.targetAmount || 1} ${t.unit || ''}`
+                          : t.flavor === 'flexible_baseline'
+                          ? `Baseline: ${(t.baselineCriteria || []).map((c) => `${c.target} ${c.unit}`).join(' OR ')}`
+                          : t.flavor}
                       </Text>
                     </View>
                   </View>

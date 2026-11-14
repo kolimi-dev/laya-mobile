@@ -6,6 +6,7 @@ export type TaskFlavor =
   | 'checklist'
   | 'quantified'
   | 'milestone'
+  | 'flexible_baseline'
   | 'one_time'
   | 'percentage'; // Legacy compatibility
 
@@ -30,6 +31,14 @@ export interface MilestoneItem {
   points: number;
 }
 
+export interface BaselineCriterion {
+  id: string;
+  label: string;
+  target: number;
+  unit: string;
+  stepAmount?: number;
+}
+
 export interface Task {
   id: string;
   userId: string;
@@ -47,6 +56,7 @@ export interface Task {
   unit?: string;
   milestones?: MilestoneItem[];
   milestoneMode?: MilestoneMode; // 'all' (AND) | 'any' (OR)
+  baselineCriteria?: BaselineCriterion[];
   targetDate?: string;   // For 'one_time' flavor: "YYYY-MM-DD"
   sortOrder: number;
   reminderTime?: string; // "08:00"
@@ -67,6 +77,8 @@ export interface CompletionEvent {
   completedMilestones?: string[]; // IDs
   skippedMilestones?: string[];   // Guilt-free exempted milestone IDs
   quantifiedValue?: number;
+  criterionValues?: Record<string, number>;
+  activeCriterionId?: string;
   notes?: string;
   occurredAt: string; // ISO 8601 UTC
 }
@@ -128,6 +140,8 @@ export interface EvaluatedTask {
   completedMilestones: string[];
   skippedMilestones: string[];
   quantifiedValue: number;
+  criterionValues?: Record<string, number>;
+  activeCriterionId?: string;
   lastEventId?: string;
   isCompleted: boolean;
   isIgnored: boolean;

@@ -12,6 +12,7 @@ import { DirectNumberModal } from './DirectNumberModal';
 import { SkipMilestoneModal } from './SkipMilestoneModal';
 import { TaskDashboardJumpModal } from './TaskDashboardJumpModal';
 import { WeeklyDotTrail } from './WeeklyDotTrail';
+import { FlexibleBaselineControl } from './FlexibleBaselineControl';
 import { getStyles } from './TaskCard.styles';
 
 interface Props {
@@ -23,8 +24,8 @@ interface Props {
   onToggleComplete: (taskId: string) => void;
   onToggleMilestone: (taskId: string, milestoneId: string) => void;
   onSkipMilestone?: (taskId: string, milestoneId: string, reason?: string) => void;
-  onUpdateQuantified: (taskId: string, delta: number) => void;
-  onSetQuantifiedExact?: (taskId: string, value: number) => void;
+  onUpdateQuantified: (taskId: string, delta: number, criterionId?: string) => void;
+  onSetQuantifiedExact?: (taskId: string, value: number, criterionId?: string) => void;
   onToggleIgnore: (taskId: string) => void;
   onEditTask?: (task: Task) => void;
   onDeleteTask?: (taskId: string, title: string) => void;
@@ -184,6 +185,17 @@ export const TaskCard: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
         </View>
+      )}
+
+      {/* Flexible Baseline Multi-Criterion Control */}
+      {task.flavor === 'flexible_baseline' && (
+        <FlexibleBaselineControl
+          task={task}
+          criterionValues={evaluated.criterionValues}
+          percentage={percentage}
+          isCompleted={isCompleted}
+          onUpdateQuantified={onUpdateQuantified}
+        />
       )}
 
       {/* Footer Actions */}

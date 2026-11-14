@@ -190,3 +190,4 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       fontWeight: '600',
     },
   });
+

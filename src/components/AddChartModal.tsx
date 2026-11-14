@@ -20,6 +20,8 @@ function getSuitableStyles(flavor: TaskFlavor): ChartVisualizerStyle[] {
   switch (flavor) {
     case 'quantified':
       return ['volume_bars', 'progression_line'];
+    case 'flexible_baseline':
+      return ['volume_bars', 'progression_line', 'activity_heatmap'];
     case 'checklist':
       return ['activity_heatmap', 'continuity_ring'];
     case 'milestone':

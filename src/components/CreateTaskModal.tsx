@@ -6,9 +6,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { Task, TaskFlavor, FrequencyType, UserGroup, MilestoneItem, MilestoneMode } from '../core/types';
+import { Task, TaskFlavor, FrequencyType, UserGroup, MilestoneItem, MilestoneMode, BaselineCriterion } from '../core/types';
 import { generateUUID } from '../services/storage';
 import { MilestonesBuilder } from './MilestonesBuilder';
+import { BaselineCriteriaBuilder } from './BaselineCriteriaBuilder';
 import { TaskFrequencyFields } from './TaskFrequencyFields';
 import { TaskQuantifiedFields } from './TaskQuantifiedFields';
 import { getStyles } from './CreateTaskModal.styles';
@@ -17,6 +18,7 @@ const FLAVORS: { id: TaskFlavor; label: string }[] = [
   { id: 'checklist', label: 'Simple Checklist' },
   { id: 'quantified', label: 'Target Number' },
   { id: 'milestone', label: 'Milestones' },
+  { id: 'flexible_baseline', label: 'Flexible Baseline' },
 ];
 
 interface Props {
@@ -46,6 +48,7 @@ export const CreateTaskModal: React.FC<Props> = ({
   const [unit, setUnit] = useState('L');
   const [milestones, setMilestones] = useState<MilestoneItem[]>([]);
   const [milestoneMode, setMilestoneMode] = useState<MilestoneMode>('all');
+  const [baselineCriteria, setBaselineCriteria] = useState<BaselineCriterion[]>([]);
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
   const [dayOfMonth, setDayOfMonth] = useState('1');
   const [monthOfYear, setMonthOfYear] = useState('1');
@@ -64,6 +67,7 @@ export const CreateTaskModal: React.FC<Props> = ({
       setUnit(initialTask.unit || '');
       setMilestones(initialTask.milestones || []);
       setMilestoneMode(initialTask.milestoneMode || 'all');
+      setBaselineCriteria(initialTask.baselineCriteria || []);
       setDaysOfWeek(initialTask.daysOfWeek || [1, 2, 3, 4, 5]);
       setDayOfMonth(initialTask.dayOfMonth ? String(initialTask.dayOfMonth) : '1');
       setMonthOfYear(initialTask.monthOfYear ? String(initialTask.monthOfYear) : '1');
@@ -80,6 +84,7 @@ export const CreateTaskModal: React.FC<Props> = ({
       setUnit('L');
       setMilestones([]);
       setMilestoneMode('all');
+      setBaselineCriteria([{ id: 'crit_1', label: 'Distance', target: 2, unit: 'km', stepAmount: 0.5 }, { id: 'crit_2', label: 'Duration', target: 20, unit: 'min', stepAmount: 5 }]);
       setDaysOfWeek([1, 2, 3, 4, 5]);
       setDayOfMonth('1');
       setMonthOfYear('1');
@@ -109,6 +114,7 @@ export const CreateTaskModal: React.FC<Props> = ({
       unit: flavor === 'quantified' ? unit.trim() : undefined,
       milestones: flavor === 'milestone' ? milestones.filter((m) => m.label.trim().length > 0) : undefined,
       milestoneMode: flavor === 'milestone' ? milestoneMode : undefined,
+      baselineCriteria: flavor === 'flexible_baseline' ? baselineCriteria : undefined,
       reminderTime: reminderTime.trim() || undefined,
       sortOrder: initialTask?.sortOrder || Date.now(),
       createdAt: initialTask?.createdAt || new Date().toISOString(),
@@ -190,6 +196,10 @@ export const CreateTaskModal: React.FC<Props> = ({
                 milestoneMode={milestoneMode}
                 onModeChange={setMilestoneMode}
               />
+            )}
+
+            {flavor === 'flexible_baseline' && (
+              <BaselineCriteriaBuilder criteria={baselineCriteria} onChange={setBaselineCriteria} />
             )}
 
             <TaskFrequencyFields
