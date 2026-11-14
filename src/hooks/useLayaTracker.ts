@@ -28,9 +28,15 @@ export function useLayaTracker() {
   const [dashboards, setDashboards] = useState<UserDashboard[]>([]);
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [activeDateOffset, setActiveDateOffset] = useState<number>(0);
 
   const activeUserId = session?.userId || 'usr_guest';
-  const opInfo = useMemo(() => getOperationalDate(), []);
+  const targetDate = useMemo(() => {
+    const d = new Date();
+    if (activeDateOffset !== 0) d.setDate(d.getDate() + activeDateOffset);
+    return d;
+  }, [activeDateOffset]);
+  const opInfo = useMemo(() => getOperationalDate(targetDate), [targetDate]);
 
   const loadUserData = useCallback(async (uid: string) => {
     const data = await StorageService.loadInitialData(uid);
@@ -100,11 +106,14 @@ export function useLayaTracker() {
     action: string,
     meta?: Record<string, unknown>
   ) => {
+    const occurredAt = activeDateOffset === 0
+      ? new Date().toISOString()
+      : new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 12, 0, 0).toISOString();
     const newEvent: CompletionEvent = {
       ...eventData,
       id: generateUUID('evt'),
       userId: activeUserId,
-      occurredAt: new Date().toISOString(),
+      occurredAt,
     };
     const updated = await StorageService.appendEvent(newEvent, activeUserId);
     setEvents([...updated]);
@@ -116,44 +125,37 @@ export function useLayaTracker() {
     const nextStatus = existing?.isCompleted ? 'in_progress' : 'completed';
     await appendEvent({ taskId, status: nextStatus, percentage: nextStatus === 'completed' ? 100 : 0 }, 'toggle_complete', { taskId, status: nextStatus });
   };
-
   const handleToggleMilestone = async (taskId: string, milestoneId: string) => {
     const existing = evaluatedTasks.find((e) => e.task.id === taskId);
     const current = existing?.completedMilestones || [];
     const next = current.includes(milestoneId) ? current.filter((m) => m !== milestoneId) : [...current, milestoneId];
     await appendEvent({ taskId, status: 'in_progress', completedMilestones: next, skippedMilestones: existing?.skippedMilestones || [] }, 'toggle_milestone', { taskId, milestoneId });
   };
-
   const handleSkipMilestone = async (taskId: string, milestoneId: string, reason?: string) => {
     const existing = evaluatedTasks.find((e) => e.task.id === taskId);
     const current = existing?.skippedMilestones || [];
     const next = reason !== undefined ? (current.includes(milestoneId) ? current : [...current, milestoneId]) : current.filter((m) => m !== milestoneId);
     await appendEvent({ taskId, status: 'in_progress', completedMilestones: existing?.completedMilestones || [], skippedMilestones: next, notes: reason }, 'skip_milestone', { taskId, milestoneId, reason });
   };
-
   const handleUpdateQuantified = async (taskId: string, delta: number) => {
     const existing = evaluatedTasks.find((e) => e.task.id === taskId);
     const nextVal = Math.max(0, Math.round(((existing?.quantifiedValue || 0) + delta) * 100) / 100);
     await appendEvent({ taskId, status: 'in_progress', quantifiedValue: nextVal }, 'update_quantified', { taskId, delta, nextVal });
   };
-
   const handleSetQuantifiedExact = async (taskId: string, val: number) => {
     const nextVal = Math.max(0, Math.round(val * 100) / 100);
     await appendEvent({ taskId, status: 'in_progress', quantifiedValue: nextVal }, 'set_quantified_exact', { taskId, val: nextVal });
   };
-
   const handleToggleIgnore = async (taskId: string) => {
     const existing = evaluatedTasks.find((e) => e.task.id === taskId);
     const nextStatus = existing?.isIgnored ? 'in_progress' : 'ignored';
     await appendEvent({ taskId, status: nextStatus }, 'toggle_ignore', { taskId, status: nextStatus });
   };
-
   const handlePinRecommendation = async (rec: ChartRecommendation) => {
     const nextList = [...pinnedCharts, createPinnedChartFromRecommendation(rec, pinnedCharts)];
     setPinnedCharts(nextList);
     await StorageService.savePinnedCharts(nextList, activeUserId);
   };
-
   const handlePinTaskChart = async (taskId: string, chartType?: ChartVisualizerStyle, dashboardId?: string) => {
     const task = tasks.find((t) => t.id === taskId);
     const resolvedType: ChartVisualizerStyle = chartType || (task?.targetAmount ? 'volume_bars' : 'activity_heatmap');
@@ -161,12 +163,10 @@ export function useLayaTracker() {
     setPinnedCharts(nextList);
     await StorageService.savePinnedCharts(nextList, activeUserId);
   };
-
   const handleCreateDashboard = async (dash: UserDashboard) => {
     await StorageService.saveDashboard(dash, activeUserId);
     setDashboards((prev) => [...prev, dash]);
   };
-
   const handleMoveChart = async (chartId: string, direction: 'up' | 'down') => {
     const idx = pinnedCharts.findIndex((c) => c.id === chartId);
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
@@ -176,13 +176,11 @@ export function useLayaTracker() {
     setPinnedCharts(list);
     await StorageService.savePinnedCharts(list, activeUserId);
   };
-
   const handleRemoveChart = async (chartId: string) => {
     const list = pinnedCharts.filter((c) => c.id !== chartId);
     setPinnedCharts(list);
     await StorageService.savePinnedCharts(list, activeUserId);
   };
-
   const handleSaveNewTask = async (task: Task) => {
     await StorageService.saveTask(task, activeUserId);
     await NotificationService.scheduleTaskReminder(task);
@@ -226,6 +224,7 @@ export function useLayaTracker() {
   return {
     loading, session, setSession, profile, setProfile, handleUpdateProfile,
     isAuthSkipped, setIsAuthSkipped, isOnline, isSyncing, triggerSync, opInfo,
+    activeDateOffset, setActiveDateOffset,
     activeGroupId, setActiveGroupId, groups, tasks, events,
     dashboards, handleCreateDashboard,
     pinnedCharts, validPinnedCharts, remainingTasks, completedOrRestedTasks, consistencyScore,
