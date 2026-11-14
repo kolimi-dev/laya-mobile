@@ -9,10 +9,22 @@ const path = require('path');
 
 const MAX_LINES = 240;
 const DIRS_TO_CHECK = ['src'];
+const ROOT_FILES = ['App.tsx'];
 const EXTENSIONS = new Set(['.ts', '.tsx', '.js']);
 
 let breachCount = 0;
 let fileCount = 0;
+
+function checkFile(fullPath) {
+  if (!fs.existsSync(fullPath)) return;
+  fileCount++;
+  const content = fs.readFileSync(fullPath, 'utf8');
+  const lines = content.split('\n').length;
+  if (lines > MAX_LINES) {
+    console.error(`❌ [BREACH] ${fullPath}: ${lines} lines (budget: ${MAX_LINES})`);
+    breachCount++;
+  }
+}
 
 function scanDir(dir) {
   if (!fs.existsSync(dir)) return;
@@ -27,21 +39,16 @@ function scanDir(dir) {
       const ext = path.extname(entry.name);
       if (!EXTENSIONS.has(ext)) continue;
       if (entry.name.includes('.test.') || entry.name.includes('.spec.')) continue;
-
-      fileCount++;
-      const content = fs.readFileSync(fullPath, 'utf8');
-      const lines = content.split('\n').length;
-
-      if (lines > MAX_LINES) {
-        console.error(`❌ [BREACH] ${fullPath}: ${lines} lines (budget: ${MAX_LINES})`);
-        breachCount++;
-      }
+      checkFile(fullPath);
     }
   }
 }
 
 for (const dir of DIRS_TO_CHECK) {
   scanDir(dir);
+}
+for (const file of ROOT_FILES) {
+  checkFile(file);
 }
 
 if (breachCount > 0) {
