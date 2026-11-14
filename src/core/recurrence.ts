@@ -58,6 +58,14 @@ export function isTaskScheduledForDate(
 ): boolean {
   if (task.archivedAt || task.deletedAt) return false;
 
+  // Do not schedule tasks on dates prior to their creation operational day
+  if (task.createdAt) {
+    const createdOp = getOperationalDate(new Date(task.createdAt));
+    if (opInfo.dateString < createdOp.dateString) {
+      return false;
+    }
+  }
+
   // One-time tasks are scheduled only on their target date (or today if unspecified)
   if (task.frequency === 'one_time' || task.flavor === 'one_time') {
     if (task.targetDate) {
@@ -104,11 +112,14 @@ export function filterEventsForTaskCadence(
   events: CompletionEvent[],
   opInfo: OperationalDateInfo
 ): CompletionEvent[] {
+  // Isolate events belonging strictly to this specific task (ADR-0001, ADR-0016)
+  const taskEvents = events.filter((e) => e.taskId === task.id);
+
   if (task.frequency === 'anytime' || task.frequency === 'one_time' || task.flavor === 'one_time') {
-    return events; // Persists across dates
+    return taskEvents; // Persists across dates
   }
 
-  return events.filter((e) => {
+  return taskEvents.filter((e) => {
     const eventOp = getOperationalDate(new Date(e.occurredAt));
     if (task.frequency === 'daily' || task.frequency === 'days_of_week' || task.frequency === 'custom') {
       return eventOp.dateString === opInfo.dateString;

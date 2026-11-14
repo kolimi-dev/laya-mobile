@@ -31,7 +31,8 @@ export function evaluateTaskProgress(
   task: Task,
   events: CompletionEvent[]
 ): EvaluatedTask {
-  const sorted = [...events].sort(
+  const taskEvents = events.filter((e) => e.taskId === task.id);
+  const sorted = [...taskEvents].sort(
     (a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime()
   );
 
