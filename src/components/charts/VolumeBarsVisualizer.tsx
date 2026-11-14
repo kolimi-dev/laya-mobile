@@ -21,9 +21,10 @@ interface Props {
 export const VolumeBarsVisualizer: React.FC<Props> = ({ task, events, daysCount = 7 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
+  const isFlexible = task.flavor === 'flexible_baseline';
 
   const dayData = useMemo(() => {
-    const result: { dateStr: string; label: string; val: number; pct: number; isDone: boolean }[] = [];
+    const result: { dateStr: string; label: string; val: number | string; pct: number; isDone: boolean }[] = [];
     const now = new Date();
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -35,16 +36,18 @@ export const VolumeBarsVisualizer: React.FC<Props> = ({ task, events, daysCount 
         (e) => (e.taskId === task.id || !e.taskId) && getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString
       );
       const evaluated = evaluateTaskProgress(task, dayEvents);
-      const val = evaluated.isIgnored ? 0 : (evaluated.quantifiedValue || (evaluated.isCompleted ? (task.targetAmount || 1) : 0));
-      const target = task.targetAmount || 1;
       const pct = evaluated.isIgnored ? 0 : evaluated.percentage;
+      const isDone = evaluated.isCompleted || pct >= 100;
+      const val = evaluated.isIgnored ? 0 : isFlexible ? (pct > 0 ? `${pct}%` : '') : (evaluated.quantifiedValue || (isDone ? (task.targetAmount || 1) : 0));
       const label = daysCount <= 7 ? dayNames[op.dayOfWeek] : `${op.dayOfMonth}`;
-      result.push({ dateStr: op.dateString, label, val, pct, isDone: evaluated.isCompleted });
+      result.push({ dateStr: op.dateString, label, val, pct, isDone });
     }
     return result;
-  }, [events, task, daysCount]);
+  }, [events, task, daysCount, isFlexible]);
 
-  const targetLabel = `${task.targetAmount || 1} ${task.unit || ''}`.trim();
+  const targetLabel = isFlexible
+    ? '100% Baseline'
+    : `${task.targetAmount || 1} ${task.unit || ''}`.trim();
 
   return (
     <View style={styles.container}>
@@ -58,13 +61,13 @@ export const VolumeBarsVisualizer: React.FC<Props> = ({ task, events, daysCount 
       <View style={styles.barsRow}>
         {dayData.map((d) => (
           <View key={d.dateStr} style={styles.barCol}>
-            <Text style={styles.valLabel}>{d.val > 0 ? d.val : ''}</Text>
+            <Text style={styles.valLabel}>{d.pct > 0 ? (isFlexible ? d.val : d.val) : ''}</Text>
             <View style={styles.track}>
-              {d.val > 0 ? (
+              {d.pct > 0 || (typeof d.val === 'number' && d.val > 0) ? (
                 <View
                   style={[
                     styles.fill,
-                    { height: `${Math.max(10, d.pct)}%` },
+                    { height: `${Math.min(100, Math.max(10, d.pct))}%` },
                     d.isDone ? styles.fillDone : styles.fillProgress,
                   ]}
                 />

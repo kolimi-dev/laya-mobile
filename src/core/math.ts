@@ -44,6 +44,8 @@ export function evaluateTaskProgress(
   let completedMilestones: string[] = [];
   let skippedMilestones: string[] = [];
   let quantifiedValue = 0;
+  let criterionValues: Record<string, number> = {};
+  let activeCriterionId: string | undefined;
   let lastEventId: string | undefined;
 
   for (const event of sorted) {
@@ -91,6 +93,24 @@ export function evaluateTaskProgress(
       if (quantifiedValue >= target) {
         currentStatus = 'completed';
       }
+    } else if (task.flavor === 'flexible_baseline') {
+      const criteria = task.baselineCriteria || [];
+      criterionValues = { ...(event.criterionValues || {}) };
+      activeCriterionId = event.activeCriterionId || criteria[0]?.id;
+      if (criteria.length > 0 && event.quantifiedValue !== undefined && !criterionValues[criteria[0].id]) {
+        criterionValues[criteria[0].id] = event.quantifiedValue;
+      }
+      let maxPct = 0;
+      for (const crit of criteria) {
+        const val = criterionValues[crit.id] || 0;
+        const target = Math.max(0.001, crit.target);
+        const pct = Math.round((val / target) * 100);
+        if (pct > maxPct) maxPct = pct;
+      }
+      percentage = event.status === 'completed' ? Math.max(100, maxPct) : maxPct;
+      if (percentage >= 100 || event.status === 'completed') {
+        currentStatus = 'completed';
+      }
     } else if (task.flavor === 'one_time' || task.flavor === 'checklist') {
       percentage = event.status === 'completed' ? 100 : 0;
     }
@@ -106,6 +126,8 @@ export function evaluateTaskProgress(
     completedMilestones,
     skippedMilestones,
     quantifiedValue,
+    criterionValues,
+    activeCriterionId,
     lastEventId,
     isCompleted,
     isIgnored,
