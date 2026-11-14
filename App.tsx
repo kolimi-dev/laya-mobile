@@ -30,6 +30,7 @@ import { LoginScreen } from './src/screens/LoginScreen';
 
 function MainApp() {
   const [activeView, setActiveView] = useState<AppView>('tasks');
+  const [selectedDashboardId, setSelectedDashboardId] = useState<string | undefined>(undefined);
   const [horizonMode, setHorizonMode] = useState<HorizonMode>('day');
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -142,6 +143,8 @@ function MainApp() {
             completedOrRestedTasks={tracker.completedOrRestedTasks}
             groups={tracker.groups}
             events={tracker.events}
+            dashboards={tracker.dashboards}
+            pinnedCharts={tracker.pinnedCharts}
             onToggleComplete={tracker.handleToggleComplete}
             onToggleMilestone={tracker.handleToggleMilestone}
             onSkipMilestone={tracker.handleSkipMilestone}
@@ -150,6 +153,7 @@ function MainApp() {
             onToggleIgnore={tracker.handleToggleIgnore}
             onEditTask={(t) => { setEditingTask(t); setModalVisible(true); }}
             onDeleteTask={confirmDelete}
+            onNavigateToDashboard={(dashId) => { setSelectedDashboardId(dashId); setActiveView('charts'); }}
             onOpenFeedback={() => setFeedbackVisible(true)}
           />
         )}
@@ -163,6 +167,7 @@ function MainApp() {
             events={tracker.events}
             dashboards={tracker.dashboards}
             groups={tracker.groups}
+            initialDashboardId={selectedDashboardId}
             onCreateDashboard={tracker.handleCreateDashboard}
             onPinChart={tracker.handlePinTaskChart}
             onMoveChart={tracker.handleMoveChart}

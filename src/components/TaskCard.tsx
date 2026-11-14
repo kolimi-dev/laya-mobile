@@ -3,13 +3,14 @@
  * Supports Checklist, Milestones (AND/OR + Skip), Quantified Step Jumps & Weekly Dot Trail
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { Task, EvaluatedTask, UserGroup, CompletionEvent } from '../core/types';
+import { Task, EvaluatedTask, UserGroup, CompletionEvent, UserDashboard, PinnedChart } from '../core/types';
 import { speakReminder } from '../services/voice';
 import { DirectNumberModal } from './DirectNumberModal';
 import { SkipMilestoneModal } from './SkipMilestoneModal';
+import { TaskDashboardJumpModal } from './TaskDashboardJumpModal';
 import { WeeklyDotTrail } from './WeeklyDotTrail';
 import { getStyles } from './TaskCard.styles';
 
@@ -17,6 +18,8 @@ interface Props {
   evaluated: EvaluatedTask;
   group?: UserGroup;
   events?: CompletionEvent[];
+  dashboards?: UserDashboard[];
+  pinnedCharts?: PinnedChart[];
   onToggleComplete: (taskId: string) => void;
   onToggleMilestone: (taskId: string, milestoneId: string) => void;
   onSkipMilestone?: (taskId: string, milestoneId: string, reason?: string) => void;
@@ -25,12 +28,15 @@ interface Props {
   onToggleIgnore: (taskId: string) => void;
   onEditTask?: (task: Task) => void;
   onDeleteTask?: (taskId: string, title: string) => void;
+  onNavigateToDashboard?: (dashboardId: string) => void;
 }
 
 export const TaskCard: React.FC<Props> = ({
   evaluated,
   group,
   events = [],
+  dashboards = [],
+  pinnedCharts = [],
   onToggleComplete,
   onToggleMilestone,
   onSkipMilestone,
@@ -39,14 +45,24 @@ export const TaskCard: React.FC<Props> = ({
   onToggleIgnore,
   onEditTask,
   onDeleteTask,
+  onNavigateToDashboard,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const [directNumberOpen, setDirectNumberOpen] = useState(false);
+  const [jumpModalOpen, setJumpModalOpen] = useState(false);
   const [skipTarget, setSkipTarget] = useState<{ id: string; label: string; isSkipped: boolean } | null>(null);
 
   const { task, isCompleted, isIgnored, percentage, completedMilestones, skippedMilestones = [], quantifiedValue } = evaluated;
   const step = task.stepAmount || 1;
+
+  const taskDashboards = useMemo(() => {
+    if (!dashboards.length || !pinnedCharts.length) return [];
+    const chartDashIds = new Set(
+      pinnedCharts.filter((c) => c.taskId === task.id).map((c) => c.dashboardId || dashboards[0]?.id || 'dash_default')
+    );
+    return dashboards.filter((d) => chartDashIds.has(d.id));
+  }, [dashboards, pinnedCharts, task.id]);
 
   const getBorderColor = () => {
     if (isCompleted) return colors.done;
@@ -78,26 +94,23 @@ export const TaskCard: React.FC<Props> = ({
                 <Text style={styles.metaPillText}>ANY 1 (OR)</Text>
               </View>
             )}
-            {task.reminderTime ? (
-              <View style={styles.metaPill}>
-                <Text style={styles.metaPillText}>⏰ {task.reminderTime}</Text>
-              </View>
-            ) : null}
+            {task.reminderTime ? <View style={styles.metaPill}><Text style={styles.metaPillText}>⏰ {task.reminderTime}</Text></View> : null}
+            {taskDashboards.length > 0 && (
+              <TouchableOpacity
+                style={styles.metaPill}
+                onPress={() => taskDashboards.length === 1 ? onNavigateToDashboard?.(taskDashboards[0].id) : setJumpModalOpen(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.metaPillText}>📊 {taskDashboards.length === 1 ? taskDashboards[0].title : `${taskDashboards.length} Dashboards`}</Text>
+              </TouchableOpacity>
+            )}
             {(task.frequency === 'one_time' || task.flavor === 'one_time') && task.targetDate && (
               <View style={styles.metaPill}><Text style={styles.metaPillText}>📅 {task.targetDate}</Text></View>
             )}
-            {task.frequency === 'monthly' && (
-              <View style={styles.metaPill}><Text style={styles.metaPillText}>🗓️ Day {task.dayOfMonth || 1}</Text></View>
-            )}
-            {task.frequency === 'yearly' && (
-              <View style={styles.metaPill}><Text style={styles.metaPillText}>🗓️ {task.monthOfYear || 1}/{task.dayOfMonth || 1}</Text></View>
-            )}
-            {task.frequency === 'custom' && task.intervalDays && (
-              <View style={styles.metaPill}><Text style={styles.metaPillText}>🔄 {task.intervalDays}d</Text></View>
-            )}
-            {task.frequency === 'anytime' && (
-              <View style={styles.metaPill}><Text style={styles.metaPillText}>Backlog</Text></View>
-            )}
+            {task.frequency === 'monthly' && <View style={styles.metaPill}><Text style={styles.metaPillText}>🗓️ Day {task.dayOfMonth || 1}</Text></View>}
+            {task.frequency === 'yearly' && <View style={styles.metaPill}><Text style={styles.metaPillText}>🗓️ {task.monthOfYear || 1}/{task.dayOfMonth || 1}</Text></View>}
+            {task.frequency === 'custom' && task.intervalDays && <View style={styles.metaPill}><Text style={styles.metaPillText}>🔄 {task.intervalDays}d</Text></View>}
+            {task.frequency === 'anytime' && <View style={styles.metaPill}><Text style={styles.metaPillText}>Backlog</Text></View>}
           </View>
         </View>
 
@@ -189,41 +202,14 @@ export const TaskCard: React.FC<Props> = ({
           <Text style={styles.voiceBtnText}>🔊 Voice</Text>
         </TouchableOpacity>
 
-        {onEditTask && (
-          <TouchableOpacity style={styles.cardActionBtn} onPress={() => onEditTask(task)} activeOpacity={0.7}>
-            <Text style={styles.cardActionText}>✏️</Text>
-          </TouchableOpacity>
-        )}
-
-        {onDeleteTask && (
-          <TouchableOpacity style={styles.cardActionBtn} onPress={() => onDeleteTask(task.id, task.title)} activeOpacity={0.7}>
-            <Text style={styles.cardActionText}>🗑️</Text>
-          </TouchableOpacity>
-        )}
-
+        {onEditTask && <TouchableOpacity style={styles.cardActionBtn} onPress={() => onEditTask(task)} activeOpacity={0.7}><Text style={styles.cardActionText}>✏️</Text></TouchableOpacity>}
+        {onDeleteTask && <TouchableOpacity style={styles.cardActionBtn} onPress={() => onDeleteTask(task.id, task.title)} activeOpacity={0.7}><Text style={styles.cardActionText}>🗑️</Text></TouchableOpacity>}
         <Text style={styles.progressText}>{percentage}%</Text>
       </View>
 
-      <DirectNumberModal
-        visible={directNumberOpen}
-        title={task.title}
-        currentValue={quantifiedValue}
-        targetAmount={task.targetAmount}
-        unit={task.unit}
-        onClose={() => setDirectNumberOpen(false)}
-        onSave={(val) => onSetQuantifiedExact?.(task.id, val)}
-      />
-
-      {skipTarget && (
-        <SkipMilestoneModal
-          visible={!!skipTarget}
-          milestoneLabel={skipTarget.label}
-          isSkipped={skipTarget.isSkipped}
-          onClose={() => setSkipTarget(null)}
-          onConfirmSkip={(reason) => onSkipMilestone?.(task.id, skipTarget.id, reason)}
-          onUnskip={() => onSkipMilestone?.(task.id, skipTarget.id, undefined)}
-        />
-      )}
+      <DirectNumberModal visible={directNumberOpen} title={task.title} currentValue={quantifiedValue} targetAmount={task.targetAmount} unit={task.unit} onClose={() => setDirectNumberOpen(false)} onSave={(val) => onSetQuantifiedExact?.(task.id, val)} />
+      {skipTarget && <SkipMilestoneModal visible={!!skipTarget} milestoneLabel={skipTarget.label} isSkipped={skipTarget.isSkipped} onClose={() => setSkipTarget(null)} onConfirmSkip={(r) => onSkipMilestone?.(task.id, skipTarget.id, r)} onUnskip={() => onSkipMilestone?.(task.id, skipTarget.id, undefined)} />}
+      {taskDashboards.length > 1 && <TaskDashboardJumpModal visible={jumpModalOpen} taskTitle={task.title} dashboards={taskDashboards} onSelect={(id) => onNavigateToDashboard?.(id)} onClose={() => setJumpModalOpen(false)} />}
     </View>
   );
 };

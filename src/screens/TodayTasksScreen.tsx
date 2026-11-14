@@ -8,7 +8,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
-import { EvaluatedTask, UserGroup, Task, CompletionEvent } from '../core/types';
+import { EvaluatedTask, UserGroup, Task, CompletionEvent, UserDashboard, PinnedChart } from '../core/types';
 import { TaskCard } from '../components/TaskCard';
 
 interface Props {
@@ -16,6 +16,8 @@ interface Props {
   completedOrRestedTasks: EvaluatedTask[];
   groups: UserGroup[];
   events?: CompletionEvent[];
+  dashboards?: UserDashboard[];
+  pinnedCharts?: PinnedChart[];
   onToggleComplete: (taskId: string) => void;
   onToggleMilestone: (taskId: string, milestoneId: string) => void;
   onSkipMilestone?: (taskId: string, milestoneId: string, reason?: string) => void;
@@ -24,6 +26,7 @@ interface Props {
   onToggleIgnore: (taskId: string) => void;
   onEditTask?: (task: Task) => void;
   onDeleteTask?: (taskId: string, title: string) => void;
+  onNavigateToDashboard?: (dashboardId: string) => void;
   onOpenFeedback?: () => void;
 }
 
@@ -32,6 +35,8 @@ export const TodayTasksScreen: React.FC<Props> = ({
   completedOrRestedTasks,
   groups,
   events = [],
+  dashboards = [],
+  pinnedCharts = [],
   onToggleComplete,
   onToggleMilestone,
   onSkipMilestone,
@@ -40,6 +45,7 @@ export const TodayTasksScreen: React.FC<Props> = ({
   onToggleIgnore,
   onEditTask,
   onDeleteTask,
+  onNavigateToDashboard,
   onOpenFeedback,
 }) => {
   const { colors } = useTheme();
@@ -67,6 +73,8 @@ export const TodayTasksScreen: React.FC<Props> = ({
       evaluated={item}
       group={groups.find((g) => g.id === item.task.groupId)}
       events={events}
+      dashboards={dashboards}
+      pinnedCharts={pinnedCharts}
       onToggleComplete={onToggleComplete}
       onToggleMilestone={onToggleMilestone}
       onSkipMilestone={onSkipMilestone}
@@ -75,6 +83,7 @@ export const TodayTasksScreen: React.FC<Props> = ({
       onToggleIgnore={onToggleIgnore}
       onEditTask={onEditTask}
       onDeleteTask={onDeleteTask}
+      onNavigateToDashboard={onNavigateToDashboard}
     />
   );
 
