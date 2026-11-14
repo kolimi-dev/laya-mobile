@@ -57,17 +57,16 @@ export const DayNavigator: React.FC<Props> = ({
       <View style={styles.topRow}>
         {/* Left: Stepper Navigation */}
         <View style={styles.stepperWrap}>
-          <TouchableOpacity
-            style={[styles.navArrowBtn, !canGoBack && styles.navArrowDisabled]}
-            disabled={!canGoBack}
-            onPress={() => {
-              if (horizonMode === 'upcoming') onToggleHorizon('day');
-              onSelectOffset(currentOffset - 1);
-            }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.navArrowText}>‹</Text>
-          </TouchableOpacity>
+          {horizonMode === 'day' && (
+            <TouchableOpacity
+              style={[styles.navArrowBtn, !canGoBack && styles.navArrowDisabled]}
+              disabled={!canGoBack}
+              onPress={() => onSelectOffset(currentOffset - 1)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.navArrowText}>‹</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.dateDisplay}
@@ -82,24 +81,23 @@ export const DayNavigator: React.FC<Props> = ({
             </Text>
             <Text style={styles.dateSubLabel}>
               {horizonMode === 'upcoming'
-                ? 'Future cadences without pressure'
+                ? 'Future cadences without pressure • Tap to return'
                 : currentOffset === 0
                 ? 'Active Daily Rhythm'
                 : `${Math.abs(currentOffset)} day${Math.abs(currentOffset) > 1 ? 's' : ''} ago • Retroactive Logging`}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.navArrowBtn, !canGoForward && styles.navArrowDisabled]}
-            disabled={!canGoForward}
-            onPress={() => {
-              if (horizonMode === 'upcoming') onToggleHorizon('day');
-              onSelectOffset(currentOffset + 1);
-            }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Text style={styles.navArrowText}>›</Text>
-          </TouchableOpacity>
+          {horizonMode === 'day' && (
+            <TouchableOpacity
+              style={[styles.navArrowBtn, !canGoForward && styles.navArrowDisabled]}
+              disabled={!canGoForward}
+              onPress={() => onSelectOffset(currentOffset + 1)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.navArrowText}>›</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Right: Horizon & Jump to Today Pills */}
