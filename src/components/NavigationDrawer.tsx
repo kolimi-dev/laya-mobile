@@ -129,14 +129,21 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.syncPill} onPress={onSyncPress} activeOpacity={0.7} disabled={isSyncing}>
-              {isSyncing ? (
-                <ActivityIndicator size="small" color={colors.primary} />
-              ) : (
-                <View style={[styles.syncDot, isOnline ? styles.syncDotOnline : styles.syncDotOffline]} />
-              )}
-              <Text style={styles.syncLabel}>{isSyncing ? 'Syncing...' : isOnline ? 'Online Sync' : 'Offline Mode'}</Text>
-            </TouchableOpacity>
+            <View style={styles.headerMetaRow}>
+              <TouchableOpacity style={styles.syncPill} onPress={onSyncPress} activeOpacity={0.7} disabled={isSyncing}>
+                {isSyncing ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <View style={[styles.syncDot, isOnline ? styles.syncDotOnline : styles.syncDotOffline]} />
+                )}
+                <Text style={styles.syncLabel}>{isSyncing ? 'Syncing...' : isOnline ? 'Online Sync' : 'Offline Mode'}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.themeTogglePill} onPress={toggleTheme} activeOpacity={0.7}>
+                <Text style={styles.themeToggleIcon}>{theme === 'dark' ? '🌙' : '☀️'}</Text>
+                <Text style={styles.themeToggleLabel}>{theme === 'dark' ? 'Dark' : 'Light'}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -200,20 +207,7 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
             <DrawerNavItem icon="📖" label="App Tour & Guide" onPress={() => { handleClose(); onOpenGuide(); }} />
             <DrawerNavItem icon="💬" label="Share Feedback" onPress={handleFeedback} />
             <DrawerNavItem icon="❤️" label="Support Kolimi" onPress={handleSupport} />
-            <DrawerNavItem
-              icon={theme === 'dark' ? '🌙' : '☀️'}
-              label="Appearance"
-              badge={theme === 'dark' ? 'Dark' : 'Light'}
-              onPress={toggleTheme}
-            />
-            <DrawerNavItem
-              icon="⏰"
-              label="Day Rollover"
-              badge="03:00 AM"
-              onPress={() => Alert.alert('Day Rollover (03:00 AM)', 'Resets at 03:00 AM so evening habits never reset prematurely.')}
-            />
             <DrawerNavItem icon="🛡️" label="Privacy & Ethics" onPress={() => { handleClose(); onOpenPrivacy?.(); }} />
-            <DrawerNavItem icon="⚙️" label="Kolimi ID Profile" onPress={() => { handleClose(); onOpenProfile(); }} />
           </ScrollView>
 
           <View style={styles.footer}>

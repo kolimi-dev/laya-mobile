@@ -83,6 +83,12 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       fontSize: 11,
       fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     },
+    headerMetaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: spacing.xs,
+    },
     syncPill: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -93,8 +99,25 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: radiuses.full,
-      alignSelf: 'flex-start',
-      marginTop: spacing.xs,
+    },
+    themeTogglePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: colors.bgCard,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: radiuses.full,
+    },
+    themeToggleIcon: {
+      fontSize: 12,
+    },
+    themeToggleLabel: {
+      color: colors.textSecondary,
+      fontSize: 11,
+      fontWeight: '600',
     },
     syncDot: { width: 6, height: 6, borderRadius: radiuses.full },
     syncDotOnline: { backgroundColor: colors.done },
@@ -150,15 +173,7 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       paddingVertical: 1,
     },
     countBadgeText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600' },
-    themeBadge: {
-      backgroundColor: colors.bgInput,
-      borderWidth: 1,
-      borderColor: colors.borderSubtle,
-      borderRadius: radiuses.full,
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-    },
-    themeBadgeText: { color: colors.textPrimary, fontSize: 11, fontWeight: '600' },
+
     divider: { height: 1, backgroundColor: colors.borderSubtle, marginVertical: spacing.sm },
     footer: {
       paddingHorizontal: spacing.lg,
