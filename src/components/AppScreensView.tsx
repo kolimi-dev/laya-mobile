@@ -32,7 +32,7 @@ interface Props {
   onSkipMilestone: (taskId: string, mId: string, reason?: string) => Promise<void>;
   onUpdateQuantified: (taskId: string, delta: number) => Promise<void>;
   onSetQuantifiedExact: (taskId: string, val: number) => Promise<void>;
-  onToggleIgnore: (taskId: string) => Promise<void>;
+  onToggleIgnore: (taskId: string, notes?: string) => Promise<void>;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string, title: string) => void;
   onNavigateToDashboard: (dashId: string) => void;

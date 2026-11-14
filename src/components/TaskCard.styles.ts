@@ -1,5 +1,6 @@
 /**
  * Laya (లయ) Mobile — TaskCard Component Styles (ADR-0010, ADR-0011, ADR-0012)
+ * Enforces minimum 44dp touch targets for accessibility.
  */
 
 import { StyleSheet } from 'react-native';
@@ -15,7 +16,7 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       borderRadius: radiuses.lg,
       padding: spacing.md,
       marginBottom: spacing.sm,
-      gap: spacing.sm,
+      gap: spacing.xs,
     },
     cardIgnored: {
       backgroundColor: colors.ignoredBg,
@@ -25,8 +26,9 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      minHeight: 44,
     },
-    titleWrap: { flex: 1, gap: 3 },
+    titleWrap: { flex: 1, gap: 2, paddingRight: spacing.sm },
     title: {
       color: colors.textPrimary,
       fontSize: typography.heading,
@@ -67,16 +69,23 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       fontSize: 10,
       fontWeight: '600',
     },
+    // Checkbox hit target: minimum 44x44dp bounding box
     checkBtn: {
-      width: 28,
-      height: 28,
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkBtnBox: {
+      width: 26,
+      height: 26,
       borderRadius: radiuses.full,
       borderWidth: 2,
       borderColor: colors.borderActive,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    checkBtnDone: {
+    checkBtnBoxDone: {
       backgroundColor: colors.done,
       borderColor: colors.done,
     },
@@ -98,7 +107,9 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       borderColor: colors.borderSubtle,
       borderRadius: radiuses.full,
       paddingHorizontal: spacing.sm,
-      paddingVertical: 4,
+      paddingVertical: 6,
+      minHeight: 36,
+      justifyContent: 'center',
     },
     milestonePillDone: {
       backgroundColor: colors.done,
@@ -125,12 +136,16 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       backgroundColor: colors.bgInput,
       padding: spacing.xs,
       borderRadius: radiuses.sm,
+      minHeight: 48,
     },
     quantifiedLabel: {
       color: colors.progress,
       fontSize: typography.body,
       fontWeight: '600',
       paddingLeft: spacing.xs,
+      minHeight: 44,
+      justifyContent: 'center',
+      textAlignVertical: 'center',
     },
     quantifiedActions: { flexDirection: 'row', gap: spacing.xs },
     stepBtn: {
@@ -138,59 +153,81 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       borderWidth: 1,
       borderColor: colors.borderSubtle,
       borderRadius: radiuses.sm,
-      width: 28,
-      height: 28,
+      minWidth: 44,
+      minHeight: 44,
       alignItems: 'center',
       justifyContent: 'center',
     },
     stepBtnText: {
       color: colors.textPrimary,
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: '600',
     },
-    footerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      borderTopWidth: 1,
-      borderTopColor: colors.borderSubtle,
-      paddingTop: spacing.xs,
-      marginTop: spacing.xs,
-    },
-    ignoreBtn: {
+    progressPill: {
+      backgroundColor: colors.bgInput,
       borderWidth: 1,
       borderColor: colors.borderSubtle,
-      borderRadius: radiuses.sm,
+      borderRadius: radiuses.full,
       paddingHorizontal: spacing.sm,
-      paddingVertical: 3,
+      paddingVertical: 4,
+      alignSelf: 'center',
     },
-    ignoreBtnActive: {
-      backgroundColor: colors.bgActive,
-      borderColor: colors.borderStrong,
+    progressPillText: {
+      color: colors.progress,
+      fontSize: typography.caption,
+      fontWeight: '700',
     },
-    ignoreBtnText: { color: colors.textTertiary, fontSize: typography.caption },
-    ignoreBtnTextActive: { color: colors.textPrimary, fontWeight: '600' },
-    voiceBtn: {
-      backgroundColor: colors.bgInput,
-      borderRadius: radiuses.sm,
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 3,
+    drawerContainer: {
+      marginTop: spacing.sm,
+      paddingTop: spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderSubtle,
+      gap: spacing.sm,
     },
-    voiceBtnText: { color: colors.textSecondary, fontSize: typography.caption },
-    progressText: {
+    drawerSection: { gap: 4 },
+    drawerSectionLabel: {
       color: colors.textTertiary,
       fontSize: typography.caption,
       fontWeight: '600',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
     },
-    cardActionBtn: {
+    drawerBadgesRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.xs,
+      alignItems: 'center',
+    },
+    drawerActionsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.xs,
+    },
+    drawerActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
       backgroundColor: colors.bgInput,
       borderWidth: 1,
       borderColor: colors.borderSubtle,
       borderRadius: radiuses.sm,
-      paddingHorizontal: 6,
-      paddingVertical: 3,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      minHeight: 40,
+      justifyContent: 'center',
     },
-    cardActionText: { fontSize: 12 },
+    drawerActionBtnActive: {
+      backgroundColor: colors.bgActive,
+      borderColor: colors.borderStrong,
+    },
+    drawerActionBtnText: {
+      color: colors.textSecondary,
+      fontSize: typography.caption,
+      fontWeight: '600',
+    },
+    drawerActionBtnTextActive: {
+      color: colors.textPrimary,
+    },
   });
 
 export const styles = getStyles();

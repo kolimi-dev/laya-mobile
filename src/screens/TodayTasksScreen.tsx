@@ -23,7 +23,7 @@ interface Props {
   onSkipMilestone?: (taskId: string, milestoneId: string, reason?: string) => void;
   onUpdateQuantified: (taskId: string, delta: number) => void;
   onSetQuantifiedExact?: (taskId: string, value: number) => void;
-  onToggleIgnore: (taskId: string) => void;
+  onToggleIgnore: (taskId: string, notes?: string) => void;
   onEditTask?: (task: Task) => void;
   onDeleteTask?: (taskId: string, title: string) => void;
   onNavigateToDashboard?: (dashboardId: string) => void;
