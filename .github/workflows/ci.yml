@@ -1,0 +1,38 @@
+name: Laya Mobile CI & Quality Gates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Line Budgets, Security & Typecheck Gates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Install Dependencies (Lockfile Sync Gate)
+        run: npm ci --include=dev
+
+      # Gate 1: Line Budget Check (< 240 lines strict limit)
+      - name: "Gate 1: Modularity & Line Counts"
+        run: npm run lint:lines
+
+      # Gate 2: Security Vulnerability Scan
+      - name: "Gate 2: Package Security Audit"
+        run: npm audit --audit-level=critical
+
+      # Gate 3: TypeScript Compilation & Typecheck
+      - name: "Gate 3: Typecheck (0 Errors)"
+        run: npm run typecheck
