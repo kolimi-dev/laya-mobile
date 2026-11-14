@@ -162,3 +162,26 @@ export function filterEventsByTimeWindow(
     }
   });
 }
+
+/**
+ * Calculates a monotonic timestamp for retroactive past-day logging (ADR-0016).
+ * Ensures new retroactive entries are strictly newer than any earlier event on that day.
+ */
+export function getMonotonicRetroactiveTimestamp(
+  offset: number,
+  targetDate: Date,
+  dateString: string,
+  events: CompletionEvent[]
+): string {
+  if (offset === 0) return new Date().toISOString();
+
+  let maxTime = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 12, 0, 0).getTime();
+  for (const e of events) {
+    const d = getOperationalDate(new Date(e.occurredAt));
+    if (d.dateString === dateString) {
+      const t = new Date(e.occurredAt).getTime();
+      if (t >= maxTime) maxTime = t + 1000;
+    }
+  }
+  return new Date(maxTime).toISOString();
+}

@@ -8,7 +8,7 @@ import { CONFIG } from '../config';
 import { logger } from '../core/logger';
 import { Task, CompletionEvent, UserGroup, PinnedChart, EvaluatedTask, UserDashboard, ChartVisualizerStyle } from '../core/types';
 import { calculateConsistencyRating, evaluateTaskProgress } from '../core/math';
-import { getOperationalDate, isTaskScheduledForDate, filterEventsForTaskCadence } from '../core/recurrence';
+import { getOperationalDate, isTaskScheduledForDate, filterEventsForTaskCadence, getMonotonicRetroactiveTimestamp } from '../core/recurrence';
 import { getChartRecommendations, createPinnedChartFromRecommendation, ChartRecommendation } from '../services/ai-suggestions';
 import { StorageService, generateUUID } from '../services/storage';
 import { SyncService } from '../services/sync';
@@ -106,9 +106,7 @@ export function useLayaTracker() {
     action: string,
     meta?: Record<string, unknown>
   ) => {
-    const occurredAt = activeDateOffset === 0
-      ? new Date().toISOString()
-      : new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 12, 0, 0).toISOString();
+    const occurredAt = getMonotonicRetroactiveTimestamp(activeDateOffset, targetDate, opInfo.dateString, events);
     const newEvent: CompletionEvent = {
       ...eventData,
       id: generateUUID('evt'),
