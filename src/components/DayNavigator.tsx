@@ -77,7 +77,7 @@ export const DayNavigator: React.FC<Props> = ({
             activeOpacity={0.7}
           >
             <Text style={styles.dateMainLabel}>
-              {horizonMode === 'upcoming' ? 'Upcoming Horizon (5d)' : displayDate}
+              {horizonMode === 'upcoming' ? 'Upcoming' : displayDate}
             </Text>
             <Text style={styles.dateSubLabel}>
               {horizonMode === 'upcoming'
@@ -88,10 +88,9 @@ export const DayNavigator: React.FC<Props> = ({
             </Text>
           </TouchableOpacity>
 
-          {horizonMode === 'day' && (
+          {horizonMode === 'day' && canGoForward && (
             <TouchableOpacity
-              style={[styles.navArrowBtn, !canGoForward && styles.navArrowDisabled]}
-              disabled={!canGoForward}
+              style={styles.navArrowBtn}
               onPress={() => onSelectOffset(currentOffset + 1)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
@@ -113,7 +112,7 @@ export const DayNavigator: React.FC<Props> = ({
               activeOpacity={0.7}
             >
               <Text style={[styles.horizonBtnText, horizonMode === 'upcoming' && styles.horizonBtnTextActive]}>
-                {horizonMode === 'upcoming' ? '← Today' : 'Upcoming (5d) 🔭'}
+                {horizonMode === 'upcoming' ? '← Today' : 'Upcoming 🔭'}
               </Text>
             </TouchableOpacity>
           )}

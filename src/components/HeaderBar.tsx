@@ -12,12 +12,14 @@ import { getStyles } from './HeaderBar.styles';
 interface Props {
   opInfo: OperationalDateInfo;
   consistencyScore: number;
+  activeDateOffset?: number;
   onMenuPress: () => void;
 }
 
 export const HeaderBar: React.FC<Props> = ({
   opInfo,
   consistencyScore,
+  activeDateOffset = 0,
   onMenuPress,
 }) => {
   const { colors } = useTheme();
@@ -30,8 +32,13 @@ export const HeaderBar: React.FC<Props> = ({
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const formattedDate = `${dayNames[opInfo.dayOfWeek]}, ${monthNames[opInfo.month]} ${opInfo.dayOfMonth}`;
+  const isPastDate = activeDateOffset < 0;
   const isRhythmActive = consistencyScore > 0;
-  const rhythmText = isRhythmActive ? `${consistencyScore}% Rhythm` : 'Ready today';
+  const rhythmText = isRhythmActive
+    ? `${consistencyScore}% Rhythm`
+    : isPastDate
+    ? 'Unlogged'
+    : 'Ready today';
 
   return (
     <View style={styles.container}>

@@ -56,7 +56,7 @@ export const UpcomingTasksScreen: React.FC<Props> = ({ tasks, groups }) => {
   return (
     <View style={styles.container}>
       <View style={styles.horizonHeader}>
-        <Text style={styles.horizonTitle}>Upcoming Horizon (Next 5 Days)</Text>
+        <Text style={styles.horizonTitle}>Upcoming Horizon</Text>
         <Text style={styles.horizonSubtext}>Approaching non-daily rhythms and scheduled milestones. Zero pressure.</Text>
       </View>
 

@@ -43,14 +43,8 @@ function MainApp() {
   const tracker = useLayaTracker();
   const updates = useAppUpdates(() => setGuideVisible(true));
 
-  const allHabitsCount = useMemo(
-    () => tracker.tasks.filter((t) => !t.deletedAt && !t.archivedAt && (t.lifecycleStatus || 'active') === 'active').length,
-    [tracker.tasks]
-  );
-  const notActiveCount = useMemo(
-    () => tracker.tasks.filter((t) => !t.deletedAt && (t.archivedAt || (t.lifecycleStatus && t.lifecycleStatus !== 'active'))).length,
-    [tracker.tasks]
-  );
+  const allHabitsCount = useMemo(() => tracker.tasks.filter((t) => !t.deletedAt && !t.archivedAt && (t.lifecycleStatus || 'active') === 'active').length, [tracker.tasks]);
+  const notActiveCount = useMemo(() => tracker.tasks.filter((t) => !t.deletedAt && (t.archivedAt || (t.lifecycleStatus && t.lifecycleStatus !== 'active'))).length, [tracker.tasks]);
   const trashCount = useMemo(() => tracker.tasks.filter((t) => !!t.deletedAt).length, [tracker.tasks]);
 
   if (tracker.loading) {
@@ -96,7 +90,7 @@ function MainApp() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <ConsentModal visible={!updates.consentAgreed} onAgree={updates.handleAgreeConsent} />
-      <HeaderBar opInfo={tracker.opInfo} consistencyScore={tracker.consistencyScore} onMenuPress={() => setDrawerVisible(true)} />
+      <HeaderBar opInfo={tracker.opInfo} consistencyScore={tracker.consistencyScore} activeDateOffset={tracker.activeDateOffset} onMenuPress={() => setDrawerVisible(true)} />
 
       {activeView === 'tasks' ? (
         <DayNavigator
