@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { Task, UserGroup } from '../core/types';
 import { ColorPalette, darkColors, radiuses, spacing, typography } from '../theme/tokens';
@@ -16,7 +16,7 @@ interface Props {
   groups: UserGroup[];
   onReactivate: (taskId: string) => void;
   onSetStatus: (taskId: string, status: 'completed' | 'paused' | 'retired') => void;
-  onDeleteToTrash: (taskId: string) => void;
+  onDeleteToTrash: (taskId: string, title?: string) => void;
 }
 
 export const NotActiveScreen: React.FC<Props> = ({
@@ -83,7 +83,7 @@ export const NotActiveScreen: React.FC<Props> = ({
           </Text>
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
+        <View style={styles.list}>
           {notActiveTasks.map((task) => {
             const group = groups.find((g) => g.id === task.groupId);
             const status = task.lifecycleStatus || 'paused';
@@ -135,14 +135,14 @@ export const NotActiveScreen: React.FC<Props> = ({
                     </TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity onPress={() => onDeleteToTrash(task.id)}>
+                  <TouchableOpacity onPress={() => onDeleteToTrash(task.id, task.title)}>
                     <Text style={styles.trashLink}>🗑️ Trash</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             );
           })}
-        </ScrollView>
+        </View>
       )}
     </View>
   );

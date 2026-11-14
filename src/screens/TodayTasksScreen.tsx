@@ -1,6 +1,6 @@
 /**
  * Laya (లయ) Mobile — Today's Tasks Screen (ADR-0004, ADR-0010, ADR-0012, ADR-0015)
- * Remaining vs Completed & Rested Buckets, Gentle 14-day Feedback Check-in
+ * Remaining rhythm focus with collapsible "Completed & Rested" accordion
  */
 
 import React, { useState, useEffect } from 'react';
@@ -51,14 +51,18 @@ export const TodayTasksScreen: React.FC<Props> = ({
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [accordionOpen, setAccordionOpen] = useState(remainingTasks.length === 0);
+
+  useEffect(() => {
+    if (remainingTasks.length === 0 && completedOrRestedTasks.length > 0) {
+      setAccordionOpen(true);
+    }
+  }, [remainingTasks.length, completedOrRestedTasks.length]);
 
   useEffect(() => {
     AsyncStorage.getItem('@laya:feedback_card_dismissed').then((val) => {
       const lastDismissed = val ? parseInt(val, 10) : 0;
-      const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
-      if (Date.now() - lastDismissed > fourteenDaysMs) {
-        setShowFeedback(true);
-      }
+      if (Date.now() - lastDismissed > 14 * 24 * 60 * 60 * 1000) setShowFeedback(true);
     });
   }, []);
 
@@ -69,21 +73,12 @@ export const TodayTasksScreen: React.FC<Props> = ({
 
   const renderCard = (item: EvaluatedTask) => (
     <TaskCard
-      key={item.task.id}
-      evaluated={item}
-      group={groups.find((g) => g.id === item.task.groupId)}
-      events={events}
-      dashboards={dashboards}
-      pinnedCharts={pinnedCharts}
-      onToggleComplete={onToggleComplete}
-      onToggleMilestone={onToggleMilestone}
-      onSkipMilestone={onSkipMilestone}
-      onUpdateQuantified={onUpdateQuantified}
-      onSetQuantifiedExact={onSetQuantifiedExact}
-      onToggleIgnore={onToggleIgnore}
-      onEditTask={onEditTask}
-      onDeleteTask={onDeleteTask}
-      onNavigateToDashboard={onNavigateToDashboard}
+      key={item.task.id} evaluated={item} group={groups.find((g) => g.id === item.task.groupId)}
+      events={events} dashboards={dashboards} pinnedCharts={pinnedCharts}
+      onToggleComplete={onToggleComplete} onToggleMilestone={onToggleMilestone}
+      onSkipMilestone={onSkipMilestone} onUpdateQuantified={onUpdateQuantified}
+      onSetQuantifiedExact={onSetQuantifiedExact} onToggleIgnore={onToggleIgnore}
+      onEditTask={onEditTask} onDeleteTask={onDeleteTask} onNavigateToDashboard={onNavigateToDashboard}
     />
   );
 
@@ -96,31 +91,45 @@ export const TodayTasksScreen: React.FC<Props> = ({
       </View>
 
       {remainingTasks.length === 0 ? (
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyTitle}>
-            {completedOrRestedTasks.length === 0 ? 'No habits yet' : 'All done for today!'}
-          </Text>
-          <Text style={styles.emptySubtext}>
-            {completedOrRestedTasks.length === 0
-              ? 'Tap "+ Add" above to start your daily rhythm, or open the menu ☰ for the guide.'
-              : 'Zero pressure. Rest peacefully.'}
-          </Text>
-        </View>
+        completedOrRestedTasks.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyTitle}>No habits yet</Text>
+            <Text style={styles.emptySubtext}>
+              Tap "+ Add" above to start your daily rhythm, or open the menu ☰ for the guide.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.celebrationCard}>
+            <Text style={styles.celebrationEmoji}>🎉</Text>
+            <Text style={styles.celebrationTitle}>All Rhythms Harmonized!</Text>
+            <Text style={styles.celebrationSubtext}>
+              You have honored all your rhythms today. Rest peacefully.
+            </Text>
+          </View>
+        )
       ) : (
         remainingTasks.map(renderCard)
       )}
 
-      {/* Bottom Bucket: Completed & Rested Today */}
+      {/* Bottom Collapsible Bucket: Completed & Rested Today */}
       {completedOrRestedTasks.length > 0 && (
         <View style={styles.completedSection}>
-          <View style={styles.bucketHeader}>
-            <View style={[styles.bucketDot, { backgroundColor: colors.done }]} />
-            <Text style={styles.bucketTitle}>
-              Completed & Rested ({completedOrRestedTasks.length})
-            </Text>
-          </View>
+          <TouchableOpacity
+            style={styles.accordionHeader}
+            onPress={() => setAccordionOpen((prev) => !prev)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <View style={styles.accordionTitleRow}>
+              <View style={[styles.bucketDot, { backgroundColor: colors.done }]} />
+              <Text style={styles.bucketTitle}>
+                Completed & Rested ({completedOrRestedTasks.length})
+              </Text>
+            </View>
+            <Text style={styles.accordionIcon}>{accordionOpen ? '▴' : '▾'}</Text>
+          </TouchableOpacity>
 
-          {completedOrRestedTasks.map(renderCard)}
+          {accordionOpen && completedOrRestedTasks.map(renderCard)}
         </View>
       )}
 
@@ -153,9 +162,28 @@ const getStyles = (colors: ColorPalette = darkColors) =>
     bucketTitle: { color: colors.textSecondary, fontSize: typography.subheading, fontWeight: '600' },
     completedSection: {
       marginTop: spacing.lg,
-      paddingTop: spacing.md,
+      paddingTop: spacing.xs,
       borderTopWidth: 1,
       borderTopColor: colors.borderSubtle,
+    },
+    accordionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      minHeight: 48,
+      paddingVertical: spacing.xs,
+      marginBottom: spacing.xs,
+    },
+    accordionTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    accordionIcon: {
+      color: colors.textTertiary,
+      fontSize: 18,
+      fontWeight: '700',
+      paddingHorizontal: spacing.xs,
     },
     emptyCard: {
       backgroundColor: colors.bgCard,
@@ -168,6 +196,19 @@ const getStyles = (colors: ColorPalette = darkColors) =>
     },
     emptyTitle: { color: colors.textPrimary, fontSize: typography.heading, fontWeight: '600' },
     emptySubtext: { color: colors.textTertiary, fontSize: typography.body },
+    celebrationCard: {
+      backgroundColor: colors.bgCard,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      borderRadius: radiuses.lg,
+      padding: spacing.lg,
+      alignItems: 'center',
+      gap: 4,
+      marginBottom: spacing.sm,
+    },
+    celebrationEmoji: { fontSize: 28 },
+    celebrationTitle: { color: colors.textPrimary, fontSize: typography.heading, fontWeight: '700' },
+    celebrationSubtext: { color: colors.textSecondary, fontSize: typography.body, textAlign: 'center' },
     feedbackCard: {
       marginTop: spacing.xl,
       padding: spacing.md,

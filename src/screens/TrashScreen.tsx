@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { Task, UserGroup } from '../core/types';
 import { ColorPalette, darkColors, radiuses, spacing, typography } from '../theme/tokens';
@@ -84,7 +84,7 @@ export const TrashScreen: React.FC<Props> = ({
           </Text>
         </View>
       ) : (
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
+        <View style={styles.list}>
           {deletedTasks.map((task) => {
             const group = groups.find((g) => g.id === task.groupId);
             const daysLeft = getDaysLeft(task.deletedAt!);
@@ -123,7 +123,7 @@ export const TrashScreen: React.FC<Props> = ({
               </View>
             );
           })}
-        </ScrollView>
+        </View>
       )}
     </View>
   );

@@ -108,7 +108,7 @@ export const AppScreensView: React.FC<Props> = (props) => {
           groups={props.groups}
           onReactivate={props.onReactivateTask}
           onSetStatus={props.onSetLifecycleStatus}
-          onDeleteToTrash={(id) => props.onDeleteTask(id, 'Habit')}
+          onDeleteToTrash={(id, title) => props.onDeleteTask(id, title || 'Habit')}
         />
       )}
       {props.activeView === 'trash' && (
