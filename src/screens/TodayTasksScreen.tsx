@@ -1,10 +1,11 @@
 /**
- * Laya (లయ) Mobile — Today's Tasks Screen (ADR-0004, ADR-0010, ADR-0012)
- * Remaining vs Completed & Rested Buckets
+ * Laya (లయ) Mobile — Today's Tasks Screen (ADR-0004, ADR-0010, ADR-0012, ADR-0015)
+ * Remaining vs Completed & Rested Buckets, Gentle 14-day Feedback Check-in
  */
 
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
 import { EvaluatedTask, UserGroup, Task, CompletionEvent } from '../core/types';
@@ -23,6 +24,7 @@ interface Props {
   onToggleIgnore: (taskId: string) => void;
   onEditTask?: (task: Task) => void;
   onDeleteTask?: (taskId: string, title: string) => void;
+  onOpenFeedback?: () => void;
 }
 
 export const TodayTasksScreen: React.FC<Props> = ({
@@ -38,9 +40,26 @@ export const TodayTasksScreen: React.FC<Props> = ({
   onToggleIgnore,
   onEditTask,
   onDeleteTask,
+  onOpenFeedback,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
+  const [showFeedback, setShowFeedback] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem('@laya:feedback_card_dismissed').then((val) => {
+      const lastDismissed = val ? parseInt(val, 10) : 0;
+      const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+      if (Date.now() - lastDismissed > fourteenDaysMs) {
+        setShowFeedback(true);
+      }
+    });
+  }, []);
+
+  const handleDismissFeedback = async () => {
+    setShowFeedback(false);
+    await AsyncStorage.setItem('@laya:feedback_card_dismissed', Date.now().toString());
+  };
 
   const renderCard = (item: EvaluatedTask) => (
     <TaskCard
@@ -95,31 +114,34 @@ export const TodayTasksScreen: React.FC<Props> = ({
           {completedOrRestedTasks.map(renderCard)}
         </View>
       )}
+
+      {/* Ethical 14-day Feedback Check-in */}
+      {showFeedback && (
+        <View style={styles.feedbackCard}>
+          <View style={styles.feedbackTextWrap}>
+            <Text style={styles.feedbackTitle}>💬 How is your rhythm feeling?</Text>
+            <Text style={styles.feedbackSubtext}>Share ideas or suggestions directly with Kolimi Studio.</Text>
+          </View>
+          <View style={styles.feedbackActions}>
+            <TouchableOpacity style={styles.feedbackBtn} onPress={onOpenFeedback}>
+              <Text style={styles.feedbackBtnText}>Share</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDismissFeedback} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Text style={styles.feedbackCloseText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 };
 
 const getStyles = (colors: ColorPalette = darkColors) =>
   StyleSheet.create({
-    container: {
-      paddingBottom: spacing.xxl,
-    },
-    bucketHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      marginBottom: spacing.sm,
-    },
-    bucketDot: {
-      width: 8,
-      height: 8,
-      borderRadius: radiuses.full,
-    },
-    bucketTitle: {
-      color: colors.textSecondary,
-      fontSize: typography.subheading,
-      fontWeight: '600',
-    },
+    container: { paddingBottom: spacing.xxl },
+    bucketHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
+    bucketDot: { width: 8, height: 8, borderRadius: radiuses.full },
+    bucketTitle: { color: colors.textSecondary, fontSize: typography.subheading, fontWeight: '600' },
     completedSection: {
       marginTop: spacing.lg,
       paddingTop: spacing.md,
@@ -135,13 +157,29 @@ const getStyles = (colors: ColorPalette = darkColors) =>
       alignItems: 'center',
       gap: 4,
     },
-    emptyTitle: {
-      color: colors.textPrimary,
-      fontSize: typography.heading,
-      fontWeight: '600',
+    emptyTitle: { color: colors.textPrimary, fontSize: typography.heading, fontWeight: '600' },
+    emptySubtext: { color: colors.textTertiary, fontSize: typography.body },
+    feedbackCard: {
+      marginTop: spacing.xl,
+      padding: spacing.md,
+      backgroundColor: colors.bgCard,
+      borderColor: colors.borderSubtle,
+      borderWidth: 1,
+      borderRadius: radiuses.md,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
-    emptySubtext: {
-      color: colors.textTertiary,
-      fontSize: typography.body,
+    feedbackTextWrap: { flex: 1, gap: 2 },
+    feedbackTitle: { color: colors.textPrimary, fontSize: 11, fontWeight: '700' },
+    feedbackSubtext: { color: colors.textTertiary, fontSize: 10 },
+    feedbackActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginLeft: spacing.sm },
+    feedbackBtn: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 4,
+      borderRadius: radiuses.sm,
     },
+    feedbackBtnText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
+    feedbackCloseText: { color: colors.textTertiary, fontSize: 14 },
   });
