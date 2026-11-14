@@ -161,10 +161,9 @@ export function useLayaTracker() {
     setPinnedCharts(nextList);
     await StorageService.savePinnedCharts(nextList, activeUserId);
   };
-  const handleCreateDashboard = async (dash: UserDashboard) => {
-    await StorageService.saveDashboard(dash, activeUserId);
-    setDashboards((prev) => [...prev, dash]);
-  };
+  const handleCreateDashboard = async (dash: UserDashboard) => { await StorageService.saveDashboard(dash, activeUserId); setDashboards((prev) => [...prev, dash]); };
+  const handleUpdateDashboard = async (dash: UserDashboard) => { await StorageService.saveDashboard(dash, activeUserId); setDashboards((prev) => prev.map((d) => (d.id === dash.id ? dash : d))); };
+  const handleDeleteDashboard = async (id: string) => { await StorageService.deleteDashboard(id, activeUserId); setDashboards((prev) => prev.filter((d) => d.id !== id)); };
   const handleMoveChart = async (chartId: string, direction: 'up' | 'down') => {
     const idx = pinnedCharts.findIndex((c) => c.id === chartId);
     const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
@@ -198,19 +197,16 @@ export function useLayaTracker() {
     await StorageService.restoreTask(taskId, activeUserId);
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, deletedAt: null, archivedAt: null, lifecycleStatus: 'active' } : t)));
   };
-
   const handlePurgeTask = async (taskId: string) => {
     await StorageService.purgeTaskPermanently(taskId, activeUserId);
     setTasks(tasks.filter((t) => t.id !== taskId));
     const clean = pinnedCharts.filter((c) => c.taskId !== taskId);
     if (clean.length !== pinnedCharts.length) { setPinnedCharts(clean); await StorageService.savePinnedCharts(clean, activeUserId); }
   };
-
   const handleEmptyTrash = async () => {
     await StorageService.emptyTrash(activeUserId);
     setTasks(tasks.filter((t) => !t.deletedAt));
   };
-
   const handleSetLifecycleStatus = async (taskId: string, status: 'active' | 'completed' | 'paused' | 'retired') => {
     await StorageService.updateTaskLifecycle(taskId, status, activeUserId);
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, lifecycleStatus: status, archivedAt: status === 'active' ? null : new Date().toISOString() } : t)));
@@ -224,7 +220,7 @@ export function useLayaTracker() {
     isAuthSkipped, setIsAuthSkipped, isOnline, isSyncing, triggerSync, opInfo,
     activeDateOffset, setActiveDateOffset,
     activeGroupId, setActiveGroupId, groups, tasks, events,
-    dashboards, handleCreateDashboard,
+    dashboards, handleCreateDashboard, handleUpdateDashboard, handleDeleteDashboard,
     pinnedCharts, validPinnedCharts, remainingTasks, completedOrRestedTasks, consistencyScore,
     chartRecommendations, handleToggleComplete, handleToggleMilestone,
     handleSkipMilestone, handleUpdateQuantified, handleSetQuantifiedExact,

@@ -31,6 +31,17 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
     dropdownTitle: { color: colors.textPrimary, fontSize: typography.subheading, fontWeight: '700', flex: 1 },
     defaultBadge: { fontSize: 12 },
     dropdownChevron: { color: colors.textSecondary, fontSize: 14, fontWeight: '700' },
+    editDashBtn: {
+      backgroundColor: colors.bgInput,
+      borderColor: colors.borderSubtle,
+      borderWidth: 1,
+      borderRadius: radiuses.md,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 8,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    editDashText: { fontSize: 14 },
     newDashBtn: {
       backgroundColor: colors.bgInput,
       borderColor: colors.borderSubtle,
@@ -49,6 +60,20 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
     },
     dashTitleWrap: { gap: 2 },
     dashCount: { color: colors.textTertiary, fontSize: typography.caption },
+    dashActionsRow: { flexDirection: 'row', gap: spacing.xs, alignItems: 'center' },
+    rearrangeBtn: {
+      backgroundColor: colors.bgInput,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 5,
+      borderRadius: radiuses.sm,
+    },
+    rearrangeBtnActive: {
+      backgroundColor: colors.badgeBg,
+      borderColor: colors.primary,
+    },
+    rearrangeBtnText: { color: colors.textSecondary, fontSize: 11, fontWeight: '600' },
     addChartBtn: {
       backgroundColor: colors.primary,
       paddingHorizontal: spacing.md,

@@ -169,6 +169,8 @@ function MainApp() {
             groups={tracker.groups}
             initialDashboardId={selectedDashboardId}
             onCreateDashboard={tracker.handleCreateDashboard}
+            onUpdateDashboard={tracker.handleUpdateDashboard}
+            onDeleteDashboard={tracker.handleDeleteDashboard}
             onPinChart={tracker.handlePinTaskChart}
             onMoveChart={tracker.handleMoveChart}
             onRemoveChart={tracker.handleRemoveChart}

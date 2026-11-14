@@ -20,6 +20,7 @@ interface Props {
   timeWindow?: TimeWindow;
   isFirst: boolean;
   isLast: boolean;
+  isEditMode?: boolean;
   onMoveUp: (chartId: string) => void;
   onMoveDown: (chartId: string) => void;
   onRemove: (chartId: string) => void;
@@ -32,6 +33,7 @@ export const ChartBlock: React.FC<Props> = ({
   timeWindow = '7d',
   isFirst,
   isLast,
+  isEditMode = false,
   onMoveUp,
   onMoveDown,
   onRemove,
@@ -72,21 +74,23 @@ export const ChartBlock: React.FC<Props> = ({
           <Text style={styles.subtitle}>{getSubtitle()}</Text>
         </View>
 
-        <View style={styles.actions}>
-          {!isFirst && (
-            <TouchableOpacity style={styles.ctrlBtn} onPress={() => onMoveUp(chart.id)}>
-              <Text style={styles.ctrlText}>▲</Text>
+        {isEditMode && (
+          <View style={styles.actions}>
+            {!isFirst && (
+              <TouchableOpacity style={styles.ctrlBtn} onPress={() => onMoveUp(chart.id)}>
+                <Text style={styles.ctrlText}>▲</Text>
+              </TouchableOpacity>
+            )}
+            {!isLast && (
+              <TouchableOpacity style={styles.ctrlBtn} onPress={() => onMoveDown(chart.id)}>
+                <Text style={styles.ctrlText}>▼</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.ctrlBtn} onPress={() => onRemove(chart.id)}>
+              <Text style={[styles.ctrlText, styles.removeText]}>✕</Text>
             </TouchableOpacity>
-          )}
-          {!isLast && (
-            <TouchableOpacity style={styles.ctrlBtn} onPress={() => onMoveDown(chart.id)}>
-              <Text style={styles.ctrlText}>▼</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={styles.ctrlBtn} onPress={() => onRemove(chart.id)}>
-            <Text style={[styles.ctrlText, styles.removeText]}>✕</Text>
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
       </View>
 
       {/* Polymorphic Visualizer Display */}

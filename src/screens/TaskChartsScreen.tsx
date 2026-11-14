@@ -14,6 +14,7 @@ import { TimeWindowSelector } from '../components/TimeWindowSelector';
 import { CreateDashboardModal } from '../components/CreateDashboardModal';
 import { AddChartModal } from '../components/AddChartModal';
 import { DashboardPickerModal } from '../components/DashboardPickerModal';
+import { EditDashboardModal } from '../components/EditDashboardModal';
 import { getStyles } from './TaskChartsScreen.styles';
 
 interface Props {
@@ -24,6 +25,8 @@ interface Props {
   groups: UserGroup[];
   initialDashboardId?: string;
   onCreateDashboard: (dash: UserDashboard) => void;
+  onUpdateDashboard?: (dash: UserDashboard) => void;
+  onDeleteDashboard?: (dashboardId: string) => void;
   onPinChart: (taskId: string, style?: ChartVisualizerStyle, dashboardId?: string) => void;
   onMoveChart: (chartId: string, direction: 'up' | 'down') => void;
   onRemoveChart: (chartId: string) => void;
@@ -36,6 +39,8 @@ export const TaskChartsScreen: React.FC<Props> = ({
   dashboards,
   initialDashboardId,
   onCreateDashboard,
+  onUpdateDashboard,
+  onDeleteDashboard,
   onPinChart,
   onMoveChart,
   onRemoveChart,
@@ -48,7 +53,9 @@ export const TaskChartsScreen: React.FC<Props> = ({
   const [timeWindow, setTimeWindow] = useState<TimeWindow>('7d');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [createDashOpen, setCreateDashOpen] = useState(false);
+  const [editDashOpen, setEditDashOpen] = useState(false);
   const [addChartOpen, setAddChartOpen] = useState(false);
+  const [isRearrangeMode, setIsRearrangeMode] = useState(false);
 
   useEffect(() => {
     if (initialDashboardId) setActiveDashId(initialDashboardId);
@@ -97,13 +104,17 @@ export const TaskChartsScreen: React.FC<Props> = ({
 
   return (
     <View style={styles.container}>
-      {/* Top Dashboard Dropdown Selector & + New Button */}
+      {/* Top Dashboard Dropdown Selector, ✏️ Edit, & + New Button */}
       <View style={styles.topSelectorRow}>
         <TouchableOpacity style={styles.dropdownBtn} onPress={() => setPickerOpen(true)} activeOpacity={0.7}>
           <Text style={styles.dropdownIcon}>{activeDashboard.icon || '📊'}</Text>
           <Text style={styles.dropdownTitle}>{activeDashboard.title}</Text>
           {activeDashId === defaultDashId && <Text style={styles.defaultBadge}>📌</Text>}
           <Text style={styles.dropdownChevron}>▾</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.editDashBtn} onPress={() => setEditDashOpen(true)} activeOpacity={0.7}>
+          <Text style={styles.editDashText}>✏️</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.newDashBtn} onPress={() => setCreateDashOpen(true)} activeOpacity={0.7}>
@@ -117,9 +128,20 @@ export const TaskChartsScreen: React.FC<Props> = ({
         <View style={styles.dashTitleWrap}>
           <Text style={styles.dashCount}>{dashboardCharts.length} Charts in this view</Text>
         </View>
-        <TouchableOpacity style={styles.addChartBtn} onPress={() => setAddChartOpen(true)} activeOpacity={0.7}>
-          <Text style={styles.addChartText}>+ Add Chart</Text>
-        </TouchableOpacity>
+        <View style={styles.dashActionsRow}>
+          {dashboardCharts.length > 0 && (
+            <TouchableOpacity
+              style={[styles.rearrangeBtn, isRearrangeMode && styles.rearrangeBtnActive]}
+              onPress={() => setIsRearrangeMode(!isRearrangeMode)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.rearrangeBtnText}>{isRearrangeMode ? '✓ Done' : '⚙️ Rearrange'}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.addChartBtn} onPress={() => setAddChartOpen(true)} activeOpacity={0.7}>
+            <Text style={styles.addChartText}>+ Add Chart</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {dashboardCharts.length === 0 ? (
@@ -143,6 +165,7 @@ export const TaskChartsScreen: React.FC<Props> = ({
               timeWindow={timeWindow}
               isFirst={idx === 0}
               isLast={idx === dashboardCharts.length - 1}
+              isEditMode={isRearrangeMode}
               onMoveUp={(id) => onMoveChart(id, 'up')}
               onMoveDown={(id) => onMoveChart(id, 'down')}
               onRemove={onRemoveChart}
@@ -160,6 +183,18 @@ export const TaskChartsScreen: React.FC<Props> = ({
         onSetDefaultDashboard={handleSetDefaultDashboard}
         onOpenCreateDashboard={() => setCreateDashOpen(true)}
         onClose={() => setPickerOpen(false)}
+      />
+
+      <EditDashboardModal
+        visible={editDashOpen}
+        dashboard={activeDashboard}
+        onClose={() => setEditDashOpen(false)}
+        onSave={(updated) => onUpdateDashboard?.(updated)}
+        onDelete={(id) => {
+          onDeleteDashboard?.(id);
+          const fallback = dashboards.find((d) => d.id !== id)?.id || 'dash_default';
+          setActiveDashId(fallback);
+        }}
       />
 
       <CreateDashboardModal
