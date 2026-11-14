@@ -18,7 +18,8 @@
       },
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
-        "SCHEDULE_EXACT_ALARM"
+        "SCHEDULE_EXACT_ALARM",
+        "REQUEST_INSTALL_PACKAGES"
       ],
       "predictiveBackGestureEnabled": false
     },

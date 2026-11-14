@@ -215,6 +215,8 @@ function MainApp() {
         updateModalVisible={updates.updateModalVisible}
         updateManifest={updates.updateManifest}
         currentVersion={CONFIG.APP_VERSION}
+        isDownloading={updates.isDownloading}
+        downloadProgress={updates.downloadProgress}
         onCloseUpdate={updates.handleCloseUpdate}
         onUpdateNow={updates.handleUpdateNow}
         whatsNewVisible={updates.whatsNewVisible}

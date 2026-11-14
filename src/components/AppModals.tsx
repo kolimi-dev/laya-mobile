@@ -45,6 +45,8 @@ export interface AppModalsProps {
   updateModalVisible: boolean;
   updateManifest: AppUpdateManifest | null;
   currentVersion: string;
+  isDownloading?: boolean;
+  downloadProgress?: number;
   onCloseUpdate: () => void;
   onUpdateNow: () => void;
   whatsNewVisible: boolean;
@@ -87,6 +89,8 @@ export const AppModals: React.FC<AppModalsProps> = (props) => {
         visible={props.updateModalVisible}
         manifest={props.updateManifest}
         currentVersion={props.currentVersion}
+        isDownloading={props.isDownloading}
+        downloadProgress={props.downloadProgress}
         onClose={props.onCloseUpdate}
         onUpdateNow={props.onUpdateNow}
       />

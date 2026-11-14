@@ -13,6 +13,8 @@ interface Props {
   visible: boolean;
   manifest: AppUpdateManifest | null;
   currentVersion: string;
+  isDownloading?: boolean;
+  downloadProgress?: number;
   onClose: () => void;
   onUpdateNow: () => void;
 }
@@ -21,6 +23,8 @@ export const UpdateModal: React.FC<Props> = ({
   visible,
   manifest,
   currentVersion,
+  isDownloading,
+  downloadProgress = 0,
   onClose,
   onUpdateNow,
 }) => {
@@ -30,7 +34,7 @@ export const UpdateModal: React.FC<Props> = ({
   if (!manifest) return null;
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={isDownloading ? undefined : onClose}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
           <View style={styles.iconWrap}>
@@ -55,18 +59,31 @@ export const UpdateModal: React.FC<Props> = ({
           </View>
 
           <Text style={styles.helperText}>
-            Direct install without app-store delays. You can also trigger this anytime from the drawer menu.
+            Direct in-app install without opening browser or store.
           </Text>
 
-          <View style={styles.buttonRow}>
-            <TouchableOpacity style={styles.laterBtn} onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.laterText}>Later</Text>
-            </TouchableOpacity>
+          {isDownloading ? (
+            <View style={styles.downloadBox}>
+              <View style={styles.progressBarTrack}>
+                <View style={[styles.progressBarFill, { width: `${Math.round(downloadProgress * 100)}%` }]} />
+              </View>
+              <Text style={styles.downloadText}>
+                {downloadProgress >= 1
+                  ? 'Launching installer...'
+                  : `Downloading update... ${Math.round(downloadProgress * 100)}%`}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.buttonRow}>
+              <TouchableOpacity style={styles.laterBtn} onPress={onClose} activeOpacity={0.7}>
+                <Text style={styles.laterText}>Later</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.updateBtn} onPress={onUpdateNow} activeOpacity={0.8}>
-              <Text style={styles.updateText}>Update Now</Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity style={styles.updateBtn} onPress={onUpdateNow} activeOpacity={0.8}>
+                <Text style={styles.updateText}>Update Now</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     </Modal>
@@ -136,4 +153,27 @@ const getStyles = (colors: ColorPalette = darkColors) =>
       alignItems: 'center',
     },
     updateText: { color: '#FFFFFF', fontSize: typography.body, fontWeight: '700' },
+    downloadBox: {
+      width: '100%',
+      paddingVertical: spacing.sm,
+      gap: spacing.xs,
+      alignItems: 'center',
+    },
+    progressBarTrack: {
+      width: '100%',
+      height: 8,
+      backgroundColor: colors.bgInput,
+      borderRadius: radiuses.full,
+      overflow: 'hidden',
+    },
+    progressBarFill: {
+      height: '100%',
+      backgroundColor: colors.primary,
+      borderRadius: radiuses.full,
+    },
+    downloadText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
   });

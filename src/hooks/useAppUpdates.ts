@@ -8,12 +8,15 @@ import { Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '../config';
 import { UpdateService, AppUpdateManifest } from '../services/updates';
+import { AppInstallerService } from '../services/installer';
 
 export function useAppUpdates(onShowGuide?: () => void) {
   const [updateManifest, setUpdateManifest] = useState<AppUpdateManifest | null>(null);
   const [updateModalVisible, setUpdateModalVisible] = useState(false);
   const [whatsNewVisible, setWhatsNewVisible] = useState(false);
   const [consentAgreed, setConsentAgreed] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   useEffect(() => {
     AsyncStorage.getItem('@laya:consent_agreed').then((v) => !v && setConsentAgreed(false));
@@ -42,11 +45,17 @@ export function useAppUpdates(onShowGuide?: () => void) {
   const handleCloseUpdate = async () => {
     if (updateManifest) await UpdateService.setDismissedVersion(updateManifest.latestVersion);
     setUpdateModalVisible(false);
+    setIsDownloading(false);
   };
 
-  const handleUpdateNow = () => {
-    if (updateManifest?.apkUrl) Linking.openURL(updateManifest.apkUrl);
-    setUpdateModalVisible(false);
+  const handleUpdateNow = async () => {
+    if (!updateManifest?.apkUrl) return;
+    setIsDownloading(true);
+    setDownloadProgress(0.05);
+    await AppInstallerService.downloadAndInstall(updateManifest.apkUrl, (p) => {
+      setDownloadProgress(p);
+    });
+    setIsDownloading(false);
   };
 
   return {
@@ -57,6 +66,8 @@ export function useAppUpdates(onShowGuide?: () => void) {
     setUpdateModalVisible,
     whatsNewVisible,
     setWhatsNewVisible,
+    isDownloading,
+    downloadProgress,
     handleCloseUpdate,
     handleUpdateNow,
   };
