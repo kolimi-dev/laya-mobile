@@ -21,10 +21,12 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
     filterActionRow: {
       flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
       backgroundColor: colors.bgDark,
       borderBottomWidth: 1,
       borderBottomColor: colors.borderSubtle,
-      paddingRight: spacing.md,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.xs,
     },
     addHabitBtn: {
       backgroundColor: colors.textPrimary,

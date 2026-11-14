@@ -18,7 +18,7 @@ import { useAppUpdates } from './src/hooks/useAppUpdates';
 import { HeaderBar } from './src/components/HeaderBar';
 import { NavigationDrawer, AppView } from './src/components/NavigationDrawer';
 import { DayNavigator, HorizonMode } from './src/components/DayNavigator';
-import { GroupFilterPills } from './src/components/GroupFilterPills';
+import { GroupSelectorDropdown } from './src/components/GroupSelectorDropdown';
 import { ConsentModal } from './src/components/ConsentModal';
 import { AppModals } from './src/components/AppModals';
 import { AppScreensView } from './src/components/AppScreensView';
@@ -114,14 +114,13 @@ function MainApp() {
 
       {activeView === 'tasks' && horizonMode === 'day' && (
         <View style={styles.filterActionRow}>
-          <View style={{ flex: 1 }}>
-            <GroupFilterPills
-              groups={tracker.groups}
-              activeGroupId={tracker.activeGroupId}
-              onSelectGroup={tracker.setActiveGroupId}
-              onManageGroups={() => setManageGroupsVisible(true)}
-            />
-          </View>
+          <GroupSelectorDropdown
+            groups={tracker.groups}
+            tasks={tracker.tasks}
+            activeGroupId={tracker.activeGroupId}
+            onSelectGroup={tracker.setActiveGroupId}
+            onManageGroups={() => setManageGroupsVisible(true)}
+          />
           <TouchableOpacity style={styles.addHabitBtn} onPress={() => { setEditingTask(null); setModalVisible(true); }}>
             <Text style={styles.addHabitText}>+ Add</Text>
           </TouchableOpacity>
