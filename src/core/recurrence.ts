@@ -1,11 +1,10 @@
 /**
  * Laya (లయ) Mobile — Recurrence & Operational Day Engine (ADR-0007, ADR-0012)
- * Night Owl Offset (03:00 AM cutoff) and Cadence Isolation
+ * Standard local calendar day (00:00:00 to 23:59:59) and Cadence Isolation
  */
 
 import { Task, CompletionEvent, TimeWindow } from './types';
 
-export const NIGHT_OWL_OFFSET_HOURS = 3; // 03:00 AM
 export const GUILT_FREE_BACKFILL_DAYS = 7;
 
 export function getOperationalDayDifference(laterDateStr: string, earlierDateStr: string): number {
@@ -21,38 +20,29 @@ export interface OperationalDateInfo {
   dayOfMonth: number; // 1-31
   month: number;      // 0-11
   year: number;
-  isNightOwlPeriod: boolean;
+  isNightOwlPeriod?: boolean;
 }
 
 /**
- * Calculates the operational date accounting for the 03:00 AM Night Owl offset.
- * Example: 2:30 AM on Tuesday counts as Monday's operational day.
+ * Calculates operational date based on the user device's local calendar day.
  */
 export function getOperationalDate(now: Date = new Date()): OperationalDateInfo {
-  const currentHour = now.getHours();
-  const isNightOwl = currentHour < NIGHT_OWL_OFFSET_HOURS;
-
-  const adjustedDate = new Date(now);
-  if (isNightOwl) {
-    adjustedDate.setDate(adjustedDate.getDate() - 1);
-  }
-
-  const year = adjustedDate.getFullYear();
-  const month = adjustedDate.getMonth();
-  const dayOfMonth = adjustedDate.getDate();
-  const dayOfWeek = adjustedDate.getDay();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const dayOfMonth = now.getDate();
+  const dayOfWeek = now.getDay();
 
   const pad = (n: number) => String(n).padStart(2, '0');
   const dateString = `${year}-${pad(month + 1)}-${pad(dayOfMonth)}`;
 
   return {
-    date: adjustedDate,
+    date: now,
     dateString,
     dayOfWeek,
     dayOfMonth,
     month,
     year,
-    isNightOwlPeriod: isNightOwl,
+    isNightOwlPeriod: false,
   };
 }
 
@@ -91,13 +81,49 @@ export function isTaskScheduledForDate(
       return (task.daysOfWeek || []).includes(opInfo.dayOfWeek);
     case 'weekly':
       return true;
-    case 'monthly':
-      return task.dayOfMonth === opInfo.dayOfMonth;
-    case 'yearly':
-      return (
-        task.dayOfMonth === opInfo.dayOfMonth &&
-        task.monthOfYear === opInfo.month + 1
-      );
+    case 'monthly': {
+      const daysInMonth = new Date(opInfo.year, opInfo.month + 1, 0).getDate();
+      const targetDay = Math.min(task.dayOfMonth || 1, daysInMonth);
+      if (opInfo.dayOfMonth === targetDay) return true;
+
+      // Mid-cycle grace period:
+      // If created in this month AFTER targetDay, keep pending for remainder of this month
+      if (task.createdAt) {
+        const createdOp = getOperationalDate(new Date(task.createdAt));
+        if (
+          createdOp.year === opInfo.year &&
+          createdOp.month === opInfo.month &&
+          createdOp.dayOfMonth > targetDay &&
+          opInfo.dayOfMonth >= createdOp.dayOfMonth
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+    case 'yearly': {
+      const targetMonth = (task.monthOfYear || 1) - 1;
+      const daysInMonth = new Date(opInfo.year, targetMonth + 1, 0).getDate();
+      const targetDay = Math.min(task.dayOfMonth || 1, daysInMonth);
+
+      if (opInfo.month === targetMonth && opInfo.dayOfMonth === targetDay) {
+        return true;
+      }
+
+      // Mid-cycle grace period:
+      // If created in current year AFTER the scheduled target, keep pending for remainder of creation year
+      if (task.createdAt) {
+        const createdOp = getOperationalDate(new Date(task.createdAt));
+        const isAfterTargetThisYear =
+          createdOp.year === opInfo.year &&
+          (createdOp.month > targetMonth ||
+            (createdOp.month === targetMonth && createdOp.dayOfMonth > targetDay));
+        if (isAfterTargetThisYear && opInfo.dateString >= createdOp.dateString) {
+          return true;
+        }
+      }
+      return false;
+    }
     case 'custom':
       if (task.intervalDays && task.intervalDays > 1) {
         const createdOp = getOperationalDate(new Date(task.createdAt));
@@ -181,27 +207,4 @@ export function filterEventsByTimeWindow(
         return true;
     }
   });
-}
-
-/**
- * Calculates a monotonic timestamp for retroactive past-day logging (ADR-0016).
- * Ensures new retroactive entries are strictly newer than any earlier event on that day.
- */
-export function getMonotonicRetroactiveTimestamp(
-  offset: number,
-  targetDate: Date,
-  dateString: string,
-  events: CompletionEvent[]
-): string {
-  if (offset === 0) return new Date().toISOString();
-
-  let maxTime = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 12, 0, 0).getTime();
-  for (const e of events) {
-    const d = getOperationalDate(new Date(e.occurredAt));
-    if (d.dateString === dateString) {
-      const t = new Date(e.occurredAt).getTime();
-      if (t >= maxTime) maxTime = t + 1000;
-    }
-  }
-  return new Date(maxTime).toISOString();
 }

@@ -81,6 +81,8 @@ export interface CompletionEvent {
   activeCriterionId?: string;
   notes?: string;
   occurredAt: string; // ISO 8601 UTC
+  targetDate?: string; // YYYY-MM-DD
+  recordedAt?: string; // ISO 8601 UTC
 }
 
 export interface UserGroup {

@@ -38,7 +38,7 @@ export const UpcomingTasksScreen: React.FC<Props> = ({ tasks, groups }) => {
       // Each habit appears only once at its earliest next scheduled occurrence
       const scheduledTasks = tasks.filter((t) => {
         if (t.deletedAt || t.archivedAt || (t.lifecycleStatus && t.lifecycleStatus !== 'active')) return false;
-        if (t.frequency === 'daily') return false; // Daily habits handled in active daily rhythm
+        if (t.frequency === 'daily' || t.frequency === 'anytime') return false; // Daily & anytime habits handled elsewhere
         if (seenTaskIds.has(t.id)) return false;
         return isTaskScheduledForDate(t, op);
       });

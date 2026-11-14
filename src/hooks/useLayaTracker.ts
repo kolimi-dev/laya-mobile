@@ -7,7 +7,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { CONFIG } from '../config';
 import { logger } from '../core/logger';
 import { Task, CompletionEvent, UserGroup, PinnedChart, UserDashboard, ChartVisualizerStyle } from '../core/types';
-import { getOperationalDate, getMonotonicRetroactiveTimestamp } from '../core/recurrence';
+import { getOperationalDate } from '../core/recurrence';
 import { createPinnedChartFromRecommendation, ChartRecommendation } from '../services/ai-suggestions';
 import { StorageService, generateUUID } from '../services/storage';
 import { SyncService } from '../services/sync';
@@ -17,10 +17,8 @@ import { useDerivedTrackerState } from './useDerivedTrackerState';
 
 export function useLayaTracker() {
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<AuthSession | null>(null);
-  const [profile, setProfile] = useState<UserProfile>({ name: '', phone: '' });
-  const [isAuthSkipped, setIsAuthSkipped] = useState(false);
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(null), [profile, setProfile] = useState<UserProfile>({ name: '', phone: '' });
+  const [isAuthSkipped, setIsAuthSkipped] = useState(false), [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [groups, setGroups] = useState<UserGroup[]>([]), [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<CompletionEvent[]>([]), [pinnedCharts, setPinnedCharts] = useState<PinnedChart[]>([]);
   const [dashboards, setDashboards] = useState<UserDashboard[]>([]), [activeDateOffset, setActiveDateOffset] = useState<number>(0);
@@ -89,11 +87,16 @@ export function useLayaTracker() {
     action: string,
     meta?: Record<string, unknown>
   ) => {
-    const occurredAt = getMonotonicRetroactiveTimestamp(activeDateOffset, targetDate, opInfo.dateString, events);
+    const nowIso = new Date().toISOString();
+    const occurredAt = activeDateOffset === 0
+      ? nowIso
+      : new Date(opInfo.year, opInfo.month, opInfo.dayOfMonth, 12, 0, 0).toISOString();
     const newEvent: CompletionEvent = {
       ...eventData,
       id: generateUUID('evt'),
       userId: activeUserId,
+      targetDate: opInfo.dateString,
+      recordedAt: nowIso,
       occurredAt,
     };
     const updated = await StorageService.appendEvent(newEvent, activeUserId);
@@ -158,8 +161,7 @@ export function useLayaTracker() {
   const handleUpdateDashboard = async (dash: UserDashboard) => { await StorageService.saveDashboard(dash, activeUserId); setDashboards((prev) => prev.map((d) => (d.id === dash.id ? dash : d))); };
   const handleDeleteDashboard = async (id: string) => { await StorageService.deleteDashboard(id, activeUserId); setDashboards((prev) => prev.filter((d) => d.id !== id)); };
   const handleMoveChart = async (chartId: string, direction: 'up' | 'down') => {
-    const idx = pinnedCharts.findIndex((c) => c.id === chartId);
-    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    const idx = pinnedCharts.findIndex((c) => c.id === chartId), targetIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (idx < 0 || targetIdx < 0 || targetIdx >= pinnedCharts.length) return;
     const list = [...pinnedCharts];
     [list[idx], list[targetIdx]] = [list[targetIdx], list[idx]];
@@ -217,7 +219,6 @@ export function useLayaTracker() {
     setGroups((prev) => prev.filter((g) => g.id !== groupId));
     if (activeGroupId === groupId) setActiveGroupId(null);
   };
-
   const handleUpdateProfile = async (p: UserProfile) => { await AuthService.saveProfile(p); setProfile(p); };
   const handleLogout = async () => { await AuthService.logout(); setSession(null); setIsAuthSkipped(false); };
 
