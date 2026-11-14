@@ -15,13 +15,20 @@ import { OnboardingProfileModal } from './OnboardingProfileModal';
 import { UpdateModal } from './UpdateModal';
 import { WhatsNewModal } from './WhatsNewModal';
 import { PrivacyPolicyModal } from './PrivacyPolicyModal';
+import { ManageGroupsModal } from './ManageGroupsModal';
 
 export interface AppModalsProps {
   modalVisible: boolean;
   groups: UserGroup[];
+  tasks: Task[];
   editingTask: Task | null;
   onCloseCreateTask: () => void;
   onSaveTask: (task: Task) => void;
+  manageGroupsVisible: boolean;
+  onCloseManageGroups: () => void;
+  onCreateGroup: (name: string, color: string) => Promise<void>;
+  onUpdateGroup: (group: UserGroup) => Promise<void>;
+  onDeleteGroup: (groupId: string) => Promise<void>;
   guideVisible: boolean;
   onCloseGuide: () => void;
   profileVisible: boolean;
@@ -91,6 +98,15 @@ export const AppModals: React.FC<AppModalsProps> = (props) => {
       <PrivacyPolicyModal
         visible={props.privacyVisible}
         onClose={props.onClosePrivacy}
+      />
+      <ManageGroupsModal
+        visible={props.manageGroupsVisible}
+        groups={props.groups}
+        tasks={props.tasks}
+        onClose={props.onCloseManageGroups}
+        onCreateGroup={props.onCreateGroup}
+        onUpdateGroup={props.onUpdateGroup}
+        onDeleteGroup={props.onDeleteGroup}
       />
     </>
   );

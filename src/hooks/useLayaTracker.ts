@@ -6,14 +6,14 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { CONFIG } from '../config';
 import { logger } from '../core/logger';
-import { Task, CompletionEvent, UserGroup, PinnedChart, EvaluatedTask, UserDashboard, ChartVisualizerStyle } from '../core/types';
-import { calculateConsistencyRating, evaluateTaskProgress } from '../core/math';
-import { getOperationalDate, isTaskScheduledForDate, filterEventsForTaskCadence, getMonotonicRetroactiveTimestamp } from '../core/recurrence';
-import { getChartRecommendations, createPinnedChartFromRecommendation, ChartRecommendation } from '../services/ai-suggestions';
+import { Task, CompletionEvent, UserGroup, PinnedChart, UserDashboard, ChartVisualizerStyle } from '../core/types';
+import { getOperationalDate, getMonotonicRetroactiveTimestamp } from '../core/recurrence';
+import { createPinnedChartFromRecommendation, ChartRecommendation } from '../services/ai-suggestions';
 import { StorageService, generateUUID } from '../services/storage';
 import { SyncService } from '../services/sync';
 import { AuthService, AuthSession, UserProfile } from '../services/auth';
 import { NotificationService } from '../services/notifications';
+import { useDerivedTrackerState } from './useDerivedTrackerState';
 
 export function useLayaTracker() {
   const [loading, setLoading] = useState(true);
@@ -79,27 +79,14 @@ export function useLayaTracker() {
     }
   }, [activeUserId, loading, loadUserData, triggerSync]);
 
-  const evaluatedTasks = useMemo<EvaluatedTask[]>(() => {
-    return tasks
-      .filter((t) => (activeGroupId ? t.groupId === activeGroupId : true) && isTaskScheduledForDate(t, opInfo))
-      .map((t) => evaluateTaskProgress(t, filterEventsForTaskCadence(t, events, opInfo)));
-  }, [tasks, events, activeGroupId, opInfo]);
-
-  const remainingTasks = useMemo(() => evaluatedTasks.filter((t) => !t.isCompleted && !t.isIgnored), [evaluatedTasks]);
-  const completedOrRestedTasks = useMemo(() => evaluatedTasks.filter((t) => t.isCompleted || t.isIgnored), [evaluatedTasks]);
-
-  const consistencyScore = useMemo(() => {
-    let completed = 0, scheduled = 0, ignored = 0;
-    for (const t of evaluatedTasks) {
-      scheduled += 100;
-      if (t.isIgnored) ignored += 100;
-      else completed += t.percentage;
-    }
-    return calculateConsistencyRating(completed, scheduled, ignored);
-  }, [evaluatedTasks]);
-
-  const chartRecommendations = useMemo(() => getChartRecommendations(tasks, pinnedCharts), [tasks, pinnedCharts]);
-  const validPinnedCharts = useMemo(() => pinnedCharts.filter((c) => tasks.some((t) => t.id === c.taskId && !t.deletedAt)), [pinnedCharts, tasks]);
+  const {
+    evaluatedTasks,
+    remainingTasks,
+    completedOrRestedTasks,
+    consistencyScore,
+    chartRecommendations,
+    validPinnedCharts,
+  } = useDerivedTrackerState({ tasks, events, pinnedCharts, activeGroupId, opInfo });
 
   const appendEvent = async (
     eventData: Omit<CompletionEvent, 'id' | 'userId' | 'occurredAt'>,
@@ -212,6 +199,25 @@ export function useLayaTracker() {
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, lifecycleStatus: status, archivedAt: status === 'active' ? null : new Date().toISOString() } : t)));
   };
 
+  const handleCreateGroup = async (name: string, color: string) => {
+    const newGroup: UserGroup = { id: generateUUID('grp'), userId: activeUserId, name, color, sortOrder: groups.length + 1 };
+    await StorageService.saveGroup(newGroup, activeUserId);
+    setGroups((prev) => [...prev, newGroup]);
+  };
+  const handleUpdateGroup = async (group: UserGroup) => {
+    await StorageService.saveGroup(group, activeUserId);
+    setGroups((prev) => prev.map((g) => (g.id === group.id ? group : g)));
+  };
+  const handleDeleteGroup = async (groupId: string) => {
+    const fallbackId = groups.find((g) => g.id !== groupId)?.id || 'grp_personal';
+    const updatedTasks = tasks.map((t) => (t.groupId === groupId ? { ...t, groupId: fallbackId } : t));
+    setTasks(updatedTasks);
+    await StorageService.saveAllData(activeUserId, { tasks: updatedTasks });
+    await StorageService.deleteGroup(groupId, activeUserId);
+    setGroups((prev) => prev.filter((g) => g.id !== groupId));
+    if (activeGroupId === groupId) setActiveGroupId(null);
+  };
+
   const handleUpdateProfile = async (p: UserProfile) => { await AuthService.saveProfile(p); setProfile(p); };
   const handleLogout = async () => { await AuthService.logout(); setSession(null); setIsAuthSkipped(false); };
 
@@ -220,6 +226,7 @@ export function useLayaTracker() {
     isAuthSkipped, setIsAuthSkipped, isOnline, isSyncing, triggerSync, opInfo,
     activeDateOffset, setActiveDateOffset,
     activeGroupId, setActiveGroupId, groups, tasks, events,
+    handleCreateGroup, handleUpdateGroup, handleDeleteGroup,
     dashboards, handleCreateDashboard, handleUpdateDashboard, handleDeleteDashboard,
     pinnedCharts, validPinnedCharts, remainingTasks, completedOrRestedTasks, consistencyScore,
     chartRecommendations, handleToggleComplete, handleToggleMilestone,

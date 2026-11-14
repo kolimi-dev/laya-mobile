@@ -13,12 +13,14 @@ interface Props {
   groups: UserGroup[];
   activeGroupId: string | null;
   onSelectGroup: (groupId: string | null) => void;
+  onManageGroups?: () => void;
 }
 
 export const GroupFilterPills: React.FC<Props> = ({
   groups,
   activeGroupId,
   onSelectGroup,
+  onManageGroups,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -32,7 +34,7 @@ export const GroupFilterPills: React.FC<Props> = ({
           activeOpacity={0.7}
         >
           <Text style={[styles.pillText, activeGroupId === null && styles.activePillText]}>
-            All Habits
+            All Groups
           </Text>
         </TouchableOpacity>
 
@@ -52,6 +54,16 @@ export const GroupFilterPills: React.FC<Props> = ({
             </TouchableOpacity>
           );
         })}
+
+        {onManageGroups && (
+          <TouchableOpacity
+            style={[styles.pill, styles.managePill]}
+            onPress={onManageGroups}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.managePillText}>⚙️ Groups</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </View>
   );
@@ -95,6 +107,15 @@ const getStyles = (colors: ColorPalette = darkColors) =>
     },
     activePillText: {
       color: colors.textPrimary,
+      fontWeight: '600',
+    },
+    managePill: {
+      borderStyle: 'dashed',
+      backgroundColor: colors.bgInput,
+    },
+    managePillText: {
+      color: colors.textTertiary,
+      fontSize: typography.caption,
       fontWeight: '600',
     },
   });

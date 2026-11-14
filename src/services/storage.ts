@@ -187,6 +187,28 @@ export class StorageService {
     await AsyncStorage.setItem(keys.DASHBOARDS, JSON.stringify(list.filter((d) => d.id !== dashboardId)));
   }
 
+  public static async saveGroups(groups: UserGroup[], userId?: string): Promise<void> {
+    const keys = this.getKeys(userId);
+    await AsyncStorage.setItem(keys.GROUPS, JSON.stringify(groups));
+  }
+
+  public static async saveGroup(group: UserGroup, userId?: string): Promise<void> {
+    const keys = this.getKeys(userId);
+    const raw = await AsyncStorage.getItem(keys.GROUPS);
+    const list: UserGroup[] = raw ? JSON.parse(raw) : [];
+    const idx = list.findIndex((g) => g.id === group.id);
+    if (idx >= 0) list[idx] = group;
+    else list.push(group);
+    await AsyncStorage.setItem(keys.GROUPS, JSON.stringify(list));
+  }
+
+  public static async deleteGroup(groupId: string, userId?: string): Promise<void> {
+    const keys = this.getKeys(userId);
+    const raw = await AsyncStorage.getItem(keys.GROUPS);
+    const list: UserGroup[] = raw ? JSON.parse(raw) : [];
+    await AsyncStorage.setItem(keys.GROUPS, JSON.stringify(list.filter((g) => g.id !== groupId)));
+  }
+
   public static async saveAllData(
     userId: string,
     data: { groups?: UserGroup[]; tasks?: Task[]; events?: CompletionEvent[] }
