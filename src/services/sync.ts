@@ -5,8 +5,9 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logger } from '../core/logger';
-import { Task, CompletionEvent, UserGroup } from '../core/types';
+import { Task, CompletionEvent, UserGroup, TaskFlavor, FrequencyType } from '../core/types';
 import { StorageService } from './storage';
+import { AuthService } from './auth';
 
 export interface SyncResult {
   isOnline: boolean;
@@ -55,6 +56,16 @@ export class SyncService {
     }
 
     try {
+      const session = await AuthService.getStoredSession();
+      if (!session?.accessToken) {
+        return {
+          isOnline: true,
+          syncedEvents: 0,
+          telemetrySent: false,
+          message: 'Local session active. Progress safely preserved.',
+        };
+      }
+      const token = session.accessToken;
       const keys = StorageService.getKeys(userId);
 
       // 1. Gather local data
@@ -68,7 +79,7 @@ export class SyncService {
       const tasks: Task[] = tasksRaw ? JSON.parse(tasksRaw) : [];
       const events: CompletionEvent[] = eventsRaw ? JSON.parse(eventsRaw) : [];
 
-      // 2. Prepare payload formatted for backend import API
+      // 2. Prepare payload enriched with full mobile schema attributes
       const formattedTasks = tasks.map((t) => ({
         id: t.id,
         userId,
@@ -77,6 +88,14 @@ export class SyncService {
         taskType: t.flavor,
         recurrence: t.frequency,
         targetValue: t.targetAmount,
+        stepAmount: t.stepAmount,
+        milestones: t.milestones,
+        milestoneMode: t.milestoneMode,
+        baselineCriteria: t.baselineCriteria,
+        schedule: (t as any).schedule,
+        lifecycleStatus: t.lifecycleStatus,
+        deletedAt: t.deletedAt,
+        targetDate: t.targetDate,
         unit: t.unit,
         sortOrder: t.sortOrder,
         createdAt: t.createdAt,
@@ -91,15 +110,15 @@ export class SyncService {
         progressPercentage: e.percentage ?? (e.status === 'completed' ? 100 : 0),
         notes: e.notes,
         occurredAt: e.occurredAt,
-        recordedAt: e.occurredAt,
+        recordedAt: e.recordedAt || e.occurredAt,
       }));
 
-      // 3. Post to bulk import endpoint (Idempotent merge)
+      // 3. Post to bulk import endpoint with valid Bearer JWT
       const importRes = await fetch(`${backendUrl}/api/v1/data/import`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${userId}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           groups,
@@ -109,36 +128,61 @@ export class SyncService {
         }),
       });
 
-      // 4. Fetch the authoritative server dataset to pull updates from web/other devices
+      // 4. Pull server updates and merge non-destructively
       let updatedData;
       if (importRes.ok) {
         try {
           const exportRes = await fetch(`${backendUrl}/api/v1/data/export`, {
             method: 'GET',
-            headers: {
-              Authorization: `Bearer ${userId}`,
-            },
+            headers: { Authorization: `Bearer ${token}` },
           });
 
           if (exportRes.ok) {
             const json = await exportRes.json();
-            const serverData = json.data;
-            if (serverData?.tasks && serverData.tasks.length > 0) {
-              const pulledTasks: Task[] = serverData.tasks.map((t: any) => ({
-                id: t.id,
-                userId: t.userId,
-                groupId: t.groupId,
-                title: t.title,
-                flavor: t.taskType || 'checklist',
-                frequency: t.recurrence || 'daily',
-                targetAmount: t.targetValue,
-                unit: t.unit,
-                sortOrder: t.sortOrder,
-                createdAt: t.createdAt,
-                updatedAt: t.updatedAt,
-              }));
-              await AsyncStorage.setItem(keys.TASKS, JSON.stringify(pulledTasks));
-              updatedData = { tasks: pulledTasks };
+            const serverTasks = json.data?.tasks;
+            if (Array.isArray(serverTasks) && serverTasks.length > 0) {
+              const localMap = new Map(tasks.map((t) => [t.id, t]));
+              const mergedTasks: Task[] = [];
+
+              for (const st of serverTasks) {
+                const local = localMap.get(st.id);
+                if (local?.deletedAt) {
+                  mergedTasks.push(local); // Never resurrect deleted tasks
+                  localMap.delete(st.id);
+                  continue;
+                }
+                const merged: Task = {
+                  id: st.id,
+                  userId: st.userId || userId,
+                  groupId: st.groupId || local?.groupId || 'grp_personal',
+                  title: st.title || local?.title || '',
+                  flavor: (st.taskType as TaskFlavor) || local?.flavor || 'checklist',
+                  frequency: (st.recurrence as FrequencyType) || local?.frequency || 'daily',
+                  targetAmount: st.targetValue !== undefined ? st.targetValue : local?.targetAmount,
+                  unit: st.unit !== undefined ? st.unit : local?.unit,
+                  sortOrder: st.sortOrder !== undefined ? st.sortOrder : (local?.sortOrder ?? 0),
+                  createdAt: local?.createdAt || st.createdAt || new Date().toISOString(),
+                  updatedAt: st.updatedAt || local?.updatedAt || new Date().toISOString(),
+                  stepAmount: local?.stepAmount ?? st.stepAmount,
+                  milestones: local?.milestones ?? st.milestones,
+                  milestoneMode: local?.milestoneMode ?? st.milestoneMode,
+                  baselineCriteria: local?.baselineCriteria ?? st.baselineCriteria,
+                  schedule: local?.schedule ?? st.schedule,
+                  lifecycleStatus: local?.lifecycleStatus ?? st.lifecycleStatus ?? 'active',
+                  targetDate: local?.targetDate ?? st.targetDate,
+                  reminderTime: local?.reminderTime ?? st.reminderTime,
+                  voiceReminder: local?.voiceReminder ?? st.voiceReminder,
+                  archivedAt: local?.archivedAt ?? st.archivedAt,
+                  deletedAt: local?.deletedAt ?? st.deletedAt,
+                };
+                mergedTasks.push(merged);
+                localMap.delete(st.id);
+              }
+              for (const remaining of localMap.values()) {
+                mergedTasks.push(remaining);
+              }
+              await AsyncStorage.setItem(keys.TASKS, JSON.stringify(mergedTasks));
+              updatedData = { tasks: mergedTasks };
             }
           }
         } catch {

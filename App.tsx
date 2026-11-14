@@ -183,6 +183,8 @@ function MainApp() {
       <AppModals
         modalVisible={modalVisible}
         groups={tracker.groups}
+        activeGroupId={tracker.activeGroupId}
+        userId={tracker.activeUserId}
         tasks={tracker.tasks}
         editingTask={editingTask}
         onCloseCreateTask={() => { setModalVisible(false); setEditingTask(null); }}

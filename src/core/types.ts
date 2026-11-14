@@ -57,6 +57,7 @@ export interface Task {
   milestones?: MilestoneItem[];
   milestoneMode?: MilestoneMode; // 'all' (AND) | 'any' (OR)
   baselineCriteria?: BaselineCriterion[];
+  schedule?: any;
   targetDate?: string;   // For 'one_time' flavor: "YYYY-MM-DD"
   sortOrder: number;
   reminderTime?: string; // "08:00"

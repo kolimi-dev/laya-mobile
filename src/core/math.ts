@@ -29,6 +29,7 @@ export function calculateConsistencyRating(
 /**
  * Evaluates the status of a single task given its completion events (ADR-0012)
  * Supports 4 flavors: checklist, quantified, milestone (AND/OR + skipped), one_time
+ * Non-destructive: carries forward accumulated state across status-change events
  */
 export function evaluateTaskProgress(
   task: Task,
@@ -53,17 +54,20 @@ export function evaluateTaskProgress(
     currentStatus = event.status;
 
     if (event.status === 'ignored') {
-      percentage = 0;
+      // Ignored rest day: preserve accumulated counters while status is ignored
       continue;
     }
 
     if (task.flavor === 'milestone') {
-      completedMilestones = event.completedMilestones || [];
-      skippedMilestones = event.skippedMilestones || [];
+      if (event.completedMilestones !== undefined) {
+        completedMilestones = event.completedMilestones;
+      }
+      if (event.skippedMilestones !== undefined) {
+        skippedMilestones = event.skippedMilestones;
+      }
       const totalCount = task.milestones?.length || 1;
 
       if (task.milestoneMode === 'any') {
-        // Disjunctive OR: Tapping ANY option completes 100% (ADR-0012)
         if (completedMilestones.length > 0) {
           percentage = 100;
           currentStatus = 'completed';
@@ -71,7 +75,6 @@ export function evaluateTaskProgress(
           percentage = 0;
         }
       } else {
-        // Conjunctive AND: Subtract skipped milestones from denominator
         const effectiveTotal = Math.max(1, totalCount - skippedMilestones.length);
         percentage = Math.min(100, Math.round((completedMilestones.length / effectiveTotal) * 100));
         if (completedMilestones.length >= effectiveTotal) {
@@ -79,7 +82,9 @@ export function evaluateTaskProgress(
         }
       }
     } else if (task.flavor === 'percentage') {
-      percentage = Math.min(100, Math.max(0, event.percentage ?? 0));
+      if (event.percentage !== undefined) {
+        percentage = Math.min(100, Math.max(0, event.percentage));
+      }
       if (percentage >= 100) {
         currentStatus = 'completed';
       }
@@ -87,7 +92,9 @@ export function evaluateTaskProgress(
       task.flavor === 'quantified' ||
       (task.flavor === 'checklist' && task.targetAmount && task.targetAmount > 0)
     ) {
-      quantifiedValue = event.quantifiedValue ?? 0;
+      if (event.quantifiedValue !== undefined && event.quantifiedValue !== null) {
+        quantifiedValue = event.quantifiedValue;
+      }
       const target = task.targetAmount || 1;
       percentage = Math.min(100, Math.round((quantifiedValue / target) * 100));
       if (quantifiedValue >= target) {
@@ -95,8 +102,14 @@ export function evaluateTaskProgress(
       }
     } else if (task.flavor === 'flexible_baseline') {
       const criteria = task.baselineCriteria || [];
-      criterionValues = { ...(event.criterionValues || {}) };
-      activeCriterionId = event.activeCriterionId || criteria[0]?.id;
+      if (event.criterionValues !== undefined) {
+        criterionValues = { ...criterionValues, ...event.criterionValues };
+      }
+      if (event.activeCriterionId !== undefined) {
+        activeCriterionId = event.activeCriterionId;
+      } else if (!activeCriterionId) {
+        activeCriterionId = criteria[0]?.id;
+      }
       if (criteria.length > 0 && event.quantifiedValue !== undefined && !criterionValues[criteria[0].id]) {
         criterionValues[criteria[0].id] = event.quantifiedValue;
       }
@@ -112,17 +125,21 @@ export function evaluateTaskProgress(
         currentStatus = 'completed';
       }
     } else if (task.flavor === 'one_time' || task.flavor === 'checklist') {
-      percentage = event.status === 'completed' ? 100 : 0;
+      if (event.status === 'completed') {
+        percentage = 100;
+      } else if (event.percentage !== undefined) {
+        percentage = event.percentage;
+      }
     }
   }
 
-  const isCompleted = currentStatus === 'completed' || percentage >= 100;
   const isIgnored = currentStatus === 'ignored';
+  const isCompleted = !isIgnored && (currentStatus === 'completed' || percentage >= 100);
 
   return {
     task,
     currentStatus,
-    percentage,
+    percentage: isIgnored ? 0 : percentage,
     completedMilestones,
     skippedMilestones,
     quantifiedValue,

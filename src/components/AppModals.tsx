@@ -21,6 +21,8 @@ export interface AppModalsProps {
   modalVisible: boolean;
   groups: UserGroup[];
   tasks: Task[];
+  activeGroupId?: string | null;
+  userId: string;
   editingTask: Task | null;
   onCloseCreateTask: () => void;
   onSaveTask: (task: Task) => void;
@@ -61,6 +63,8 @@ export const AppModals: React.FC<AppModalsProps> = (props) => {
       <CreateTaskModal
         visible={props.modalVisible}
         groups={props.groups}
+        activeGroupId={props.activeGroupId}
+        userId={props.userId}
         initialTask={props.editingTask}
         onClose={props.onCloseCreateTask}
         onSave={props.onSaveTask}

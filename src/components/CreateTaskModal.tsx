@@ -24,6 +24,8 @@ const FLAVORS: { id: TaskFlavor; label: string }[] = [
 interface Props {
   visible: boolean;
   groups: UserGroup[];
+  activeGroupId?: string | null;
+  userId: string;
   initialTask?: Task | null;
   onClose: () => void;
   onSave: (task: Task) => void;
@@ -32,6 +34,8 @@ interface Props {
 export const CreateTaskModal: React.FC<Props> = ({
   visible,
   groups,
+  activeGroupId,
+  userId,
   initialTask,
   onClose,
   onSave,
@@ -39,22 +43,14 @@ export const CreateTaskModal: React.FC<Props> = ({
   const { colors } = useTheme();
   const styles = getStyles(colors);
 
-  const [title, setTitle] = useState('');
-  const [groupId, setGroupId] = useState(groups[0]?.id || 'grp_personal');
-  const [flavor, setFlavor] = useState<TaskFlavor>('checklist');
-  const [frequency, setFrequency] = useState<FrequencyType>('daily');
-  const [targetAmount, setTargetAmount] = useState('4');
-  const [stepAmount, setStepAmount] = useState('1');
-  const [unit, setUnit] = useState('L');
-  const [milestones, setMilestones] = useState<MilestoneItem[]>([]);
-  const [milestoneMode, setMilestoneMode] = useState<MilestoneMode>('all');
+  const [title, setTitle] = useState(''), [groupId, setGroupId] = useState(activeGroupId || groups[0]?.id || 'grp_personal');
+  const [flavor, setFlavor] = useState<TaskFlavor>('checklist'), [frequency, setFrequency] = useState<FrequencyType>('daily');
+  const [targetAmount, setTargetAmount] = useState('4'), [stepAmount, setStepAmount] = useState('1'), [unit, setUnit] = useState('L');
+  const [milestones, setMilestones] = useState<MilestoneItem[]>([]), [milestoneMode, setMilestoneMode] = useState<MilestoneMode>('all');
   const [baselineCriteria, setBaselineCriteria] = useState<BaselineCriterion[]>([]);
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [dayOfMonth, setDayOfMonth] = useState('1');
-  const [monthOfYear, setMonthOfYear] = useState('1');
-  const [intervalDays, setIntervalDays] = useState('2');
-  const [targetDate, setTargetDate] = useState('');
-  const [reminderTime, setReminderTime] = useState('');
+  const [dayOfMonth, setDayOfMonth] = useState('1'), [monthOfYear, setMonthOfYear] = useState('1'), [intervalDays, setIntervalDays] = useState('2');
+  const [targetDate, setTargetDate] = useState(''), [reminderTime, setReminderTime] = useState('');
 
   useEffect(() => {
     if (initialTask) {
@@ -76,7 +72,7 @@ export const CreateTaskModal: React.FC<Props> = ({
       setReminderTime(initialTask.reminderTime || '');
     } else {
       setTitle('');
-      setGroupId(groups[0]?.id || 'grp_personal');
+      setGroupId(activeGroupId || groups[0]?.id || 'grp_personal');
       setFlavor('checklist');
       setFrequency('daily');
       setTargetAmount('4');
@@ -92,14 +88,18 @@ export const CreateTaskModal: React.FC<Props> = ({
       setTargetDate(new Date().toISOString().split('T')[0]);
       setReminderTime('');
     }
-  }, [initialTask, visible, groups]);
+  }, [initialTask, visible, groups, activeGroupId]);
 
   const handleSubmit = () => {
     if (!title.trim()) return;
+    const effectiveUserId = initialTask?.userId || userId;
+    if (!effectiveUserId) {
+      throw new Error('Task creation requires a valid user identity.');
+    }
 
     const taskData: Task = {
       id: initialTask?.id || generateUUID('tsk'),
-      userId: initialTask?.userId || 'usr_friend_1',
+      userId: effectiveUserId,
       groupId,
       title: title.trim(),
       flavor,
