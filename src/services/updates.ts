@@ -35,9 +35,11 @@ export class UpdateService {
    * Fetches latest update manifest with graceful offline fallbacks
    */
   public static async fetchManifest(): Promise<AppUpdateManifest | null> {
+    let manifest: AppUpdateManifest | null = null;
+
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 6000);
+      const timeout = setTimeout(() => controller.abort(), 4000);
 
       // Attempt platform version endpoint first
       const endpoint = `${CONFIG.BACKEND_URL}/api/v1/app/version`;
@@ -48,24 +50,29 @@ export class UpdateService {
       clearTimeout(timeout);
 
       if (response.ok) {
-        return (await response.json()) as AppUpdateManifest;
+        manifest = (await response.json()) as AppUpdateManifest;
       }
     } catch {
-      // Offline or network timeout - proceed to static hosted fallback
+      // Backend offline or network timeout
     }
 
-    // Hosted GitHub release manifest fallback
-    try {
-      const fallbackUrl = 'https://raw.githubusercontent.com/kolimi-dev/laya-mobile/main/version.json';
-      const fallbackRes = await fetch(fallbackUrl);
-      if (fallbackRes.ok) {
-        return (await fallbackRes.json()) as AppUpdateManifest;
+    // If backend didn't yield a newer version, check the instant GitHub raw manifest
+    if (!manifest || !UpdateService.isNewerVersion(manifest.latestVersion, CONFIG.APP_VERSION)) {
+      try {
+        const fallbackUrl = 'https://raw.githubusercontent.com/kolimi-dev/laya-mobile/main/version.json';
+        const fallbackRes = await fetch(fallbackUrl);
+        if (fallbackRes.ok) {
+          const fallback = (await fallbackRes.json()) as AppUpdateManifest;
+          if (fallback && (!manifest || UpdateService.isNewerVersion(fallback.latestVersion, manifest.latestVersion))) {
+            return fallback;
+          }
+        }
+      } catch {
+        // GitHub fallback offline
       }
-    } catch {
-      // Total offline mode
     }
 
-    return null;
+    return manifest;
   }
 
   public static async getLastSeenVersion(): Promise<string | null> {
