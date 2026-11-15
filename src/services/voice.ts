@@ -29,22 +29,24 @@ export function isInQuietHours(
 }
 
 /**
- * Delivers an audible voice reminder if allowed by quiet hours
+ * Delivers an audible voice reminder if allowed by quiet hours (manual taps bypass quiet hours)
  */
 export async function speakReminder(
   taskTitle: string,
   group?: UserGroup,
-  customMessage?: string
+  customMessage?: string,
+  isManualTap: boolean = true
 ): Promise<{ spoken: boolean; reason?: string }> {
-  // Check group or default quiet hours
-  const quietStart = group?.quietHoursStart || '22:00';
-  const quietEnd = group?.quietHoursEnd || '07:30';
+  if (!isManualTap) {
+    const quietStart = group?.quietHoursStart || '22:00';
+    const quietEnd = group?.quietHoursEnd || '07:30';
 
-  if (isInQuietHours(new Date(), quietStart, quietEnd)) {
-    return {
-      spoken: false,
-      reason: `Quiet hours active (${quietStart} – ${quietEnd}). Downgraded to silent notification.`,
-    };
+    if (isInQuietHours(new Date(), quietStart, quietEnd)) {
+      return {
+        spoken: false,
+        reason: `Quiet hours active (${quietStart} – ${quietEnd}). Downgraded to silent notification.`,
+      };
+    }
   }
 
   // Phonetic "Laa-yaa" prevents English TTS engines from pronouncing it as "Layer" (/ˈleɪ.ə/)
@@ -97,13 +99,16 @@ export async function speakTeluguPrompt(
  */
 export async function speakTeluguReminder(
   taskTitle: string,
-  group?: UserGroup
+  group?: UserGroup,
+  isManualTap: boolean = true
 ): Promise<{ spoken: boolean; reason?: string }> {
-  const quietStart = group?.quietHoursStart || '22:00';
-  const quietEnd = group?.quietHoursEnd || '07:30';
+  if (!isManualTap) {
+    const quietStart = group?.quietHoursStart || '22:00';
+    const quietEnd = group?.quietHoursEnd || '07:30';
 
-  if (isInQuietHours(new Date(), quietStart, quietEnd)) {
-    return { spoken: false, reason: 'Quiet hours active.' };
+    if (isInQuietHours(new Date(), quietStart, quietEnd)) {
+      return { spoken: false, reason: 'Quiet hours active.' };
+    }
   }
 
   const prompt = `లయ నుండి సున్నితమైన జ్ఞాపిక: ${taskTitle} సమయం ఆసన్నమైంది.`;

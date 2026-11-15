@@ -70,6 +70,14 @@ export const ManageGroupsModal: React.FC<Props> = ({
     setEditingGroupId(null);
   };
 
+  const handleTogglePause = async (g: UserGroup) => {
+    await onUpdateGroup({ ...g, lifecycleStatus: g.lifecycleStatus === 'paused' ? 'active' : 'paused' });
+  };
+
+  const handleToggleComplete = async (g: UserGroup) => {
+    await onUpdateGroup({ ...g, lifecycleStatus: g.lifecycleStatus === 'completed' ? 'active' : 'completed' });
+  };
+
   const handleDeleteWithConfirm = (g: UserGroup) => {
     Alert.alert(
       'Delete Group',
@@ -135,6 +143,24 @@ export const ManageGroupsModal: React.FC<Props> = ({
                         />
                       ))}
                     </View>
+                    <View style={styles.lifecycleRow}>
+                      <TouchableOpacity
+                        style={[styles.lifecycleBtn, g.lifecycleStatus === 'paused' && styles.lifecycleBtnActive]}
+                        onPress={() => handleTogglePause(g)}
+                      >
+                        <Text style={[styles.lifecycleBtnText, g.lifecycleStatus === 'paused' && styles.lifecycleBtnTextActive]}>
+                          {g.lifecycleStatus === 'paused' ? '▶️ Resume' : '⏸️ Pause'}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.lifecycleBtn, g.lifecycleStatus === 'completed' && styles.lifecycleBtnActive]}
+                        onPress={() => handleToggleComplete(g)}
+                      >
+                        <Text style={[styles.lifecycleBtnText, g.lifecycleStatus === 'completed' && styles.lifecycleBtnTextActive]}>
+                          {g.lifecycleStatus === 'completed' ? '✓ Mark Active' : '🏁 Complete'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                     <View style={styles.actionsRow}>
                       <TouchableOpacity style={[styles.actionBtn, styles.cancelBtn]} onPress={cancelEdit}>
                         <Text style={styles.cancelBtnText}>✕ Cancel</Text>
@@ -155,6 +181,8 @@ export const ManageGroupsModal: React.FC<Props> = ({
                   <View style={styles.groupInfo}>
                     <View style={[styles.colorDot, { backgroundColor: g.color || colors.primary }]} />
                     <Text style={styles.groupName}>{g.name}</Text>
+                    {g.lifecycleStatus === 'paused' && <Text style={styles.statusBadge}>⏸️ Paused</Text>}
+                    {g.lifecycleStatus === 'completed' && <Text style={[styles.statusBadge, styles.statusBadgeDone]}>🏁 Done</Text>}
                     <Text style={styles.countBadge}>{taskCount} {taskCount === 1 ? 'habit' : 'habits'}</Text>
                   </View>
                   <TouchableOpacity style={styles.iconBtn} onPress={() => startEdit(g)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>

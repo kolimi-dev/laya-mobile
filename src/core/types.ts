@@ -94,6 +94,7 @@ export interface UserGroup {
   sortOrder: number;
   quietHoursStart?: string; // "22:00"
   quietHoursEnd?: string;   // "07:30"
+  lifecycleStatus?: 'active' | 'paused' | 'completed' | 'retired';
 }
 
 export type ChartVisualizerStyle =

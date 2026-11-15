@@ -1,17 +1,19 @@
 /**
  * Laya (లయ) Mobile — Weekly Dot Trail Component (ADR-0012, Phase 5)
- * Inline 7-Day Rhythm Dot Matrix at a Glance
+ * Inline 7-Day Rhythm Dot Matrix evaluating latest status via evaluateTaskProgress
  */
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { CompletionEvent } from '../core/types';
+import { Task, CompletionEvent } from '../core/types';
 import { getOperationalDate } from '../core/recurrence';
-import { ColorPalette, darkColors, radiuses, typography } from '../theme/tokens';
+import { evaluateTaskProgress } from '../core/math';
+import { ColorPalette, darkColors, radiuses } from '../theme/tokens';
 
 interface Props {
   taskId: string;
+  task?: Task;
   events: CompletionEvent[];
 }
 
@@ -22,7 +24,7 @@ interface DayDot {
   isToday: boolean;
 }
 
-export const WeeklyDotTrail: React.FC<Props> = ({ taskId, events }) => {
+export const WeeklyDotTrail: React.FC<Props> = ({ taskId, task, events }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
 
@@ -38,20 +40,33 @@ export const WeeklyDotTrail: React.FC<Props> = ({ taskId, events }) => {
       d.setDate(d.getDate() - i);
       const op = getOperationalDate(d);
 
-      // Find events matching this operational date
-      const dayEvt = taskEvents.find((e) => {
+      const dayEvents = taskEvents.filter((e) => {
         const eOp = getOperationalDate(new Date(e.occurredAt));
         return eOp.dateString === op.dateString;
       });
 
       let status: 'completed' | 'ignored' | 'in_progress' | 'none' = 'none';
-      if (dayEvt) {
-        if (dayEvt.status === 'completed' || (dayEvt.percentage && dayEvt.percentage >= 100)) {
-          status = 'completed';
-        } else if (dayEvt.status === 'ignored') {
-          status = 'ignored';
+      if (dayEvents.length > 0) {
+        if (task) {
+          const evaluated = evaluateTaskProgress(task, dayEvents);
+          if (evaluated.isCompleted || evaluated.percentage >= 100) {
+            status = 'completed';
+          } else if (evaluated.isIgnored) {
+            status = 'ignored';
+          } else if (evaluated.percentage > 0 || evaluated.currentStatus === 'in_progress') {
+            status = 'in_progress';
+          }
         } else {
-          status = 'in_progress';
+          const latestEvt = [...dayEvents].sort(
+            (a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()
+          )[0];
+          if (latestEvt.status === 'completed' || (latestEvt.percentage && latestEvt.percentage >= 100)) {
+            status = 'completed';
+          } else if (latestEvt.status === 'ignored') {
+            status = 'ignored';
+          } else {
+            status = 'in_progress';
+          }
         }
       }
 
@@ -64,7 +79,7 @@ export const WeeklyDotTrail: React.FC<Props> = ({ taskId, events }) => {
     }
 
     return result;
-  }, [taskId, events]);
+  }, [taskId, task, events]);
 
   const getDotColor = (status: DayDot['status']) => {
     if (status === 'completed') return colors.done;

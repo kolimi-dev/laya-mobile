@@ -7,6 +7,7 @@ import React from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { MilestoneItem, MilestoneMode } from '../core/types';
+import { generateUUID } from '../services/storage';
 import { ColorPalette, darkColors, radiuses, spacing, typography } from '../theme/tokens';
 
 interface Props {
@@ -28,7 +29,7 @@ export const MilestonesBuilder: React.FC<Props> = ({
   const handleAdd = () => {
     onChange([
       ...milestones,
-      { id: Date.now().toString(), label: '', points: 1 },
+      { id: generateUUID('mls'), label: '', points: 1 },
     ]);
   };
 

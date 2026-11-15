@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { ColorPalette, darkColors, spacing, radiuses, typography } from '../theme/tokens';
 import { PinnedChart, Task, CompletionEvent, TimeWindow } from '../core/types';
@@ -56,6 +56,13 @@ export const ChartBlock: React.FC<Props> = ({
   const daysCount = getDaysCount(timeWindow);
   const visualizerStyle = chart.chartType;
 
+  const handleRemove = () => {
+    Alert.alert('Remove Chart', 'Remove this chart from your dashboard?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => onRemove(chart.id) },
+    ]);
+  };
+
   const getSubtitle = () => {
     switch (visualizerStyle) {
       case 'volume_bars': return 'Volume Bars';
@@ -86,7 +93,7 @@ export const ChartBlock: React.FC<Props> = ({
                 <Text style={styles.ctrlText}>▼</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.ctrlBtn} onPress={() => onRemove(chart.id)}>
+            <TouchableOpacity style={styles.ctrlBtn} onPress={handleRemove}>
               <Text style={[styles.ctrlText, styles.removeText]}>✕</Text>
             </TouchableOpacity>
           </View>
@@ -95,7 +102,7 @@ export const ChartBlock: React.FC<Props> = ({
 
       {/* Polymorphic Visualizer Display */}
       {visualizerStyle === 'volume_bars' && (
-        <VolumeBarsVisualizer task={task} events={events} daysCount={Math.min(14, daysCount)} />
+        <VolumeBarsVisualizer task={task} events={events} daysCount={Math.min(14, daysCount)} timeWindow={timeWindow} />
       )}
       {visualizerStyle === 'continuity_ring' && (
         <ContinuityRingVisualizer task={task} events={events} daysCount={daysCount} />

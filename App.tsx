@@ -54,7 +54,7 @@ function MainApp() {
   if (!tracker.session && !tracker.isAuthSkipped) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="light" />
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <LoginScreen
           onLoginSuccess={(s) => { tracker.setSession(s); if (!tracker.profile.name) setOnboardingVisible(true); }}
           onSkipOffline={() => tracker.setIsAuthSkipped(true)}

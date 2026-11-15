@@ -52,7 +52,7 @@ export const TaskCardDrawer: React.FC<TaskCardDrawerProps> = ({
       {/* 7-Day Rhythm Dot Trail */}
       <View style={styles.drawerSection}>
         <Text style={styles.drawerSectionLabel}>7-Day Rhythm</Text>
-        <WeeklyDotTrail taskId={task.id} events={events} />
+        <WeeklyDotTrail taskId={task.id} task={task} events={events} />
       </View>
 
       {/* Meta Badges */}

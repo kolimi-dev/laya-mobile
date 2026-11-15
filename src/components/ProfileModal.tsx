@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { AuthService, AuthSession, UserProfile } from '../services/auth';
 import { CountryCode, COUNTRY_CODES, DEFAULT_COUNTRY } from '../data/countryCodes';
@@ -68,10 +68,19 @@ export const ProfileModal: React.FC<Props> = ({
     setTimeout(() => setStatusMsg(null), 2500);
   };
 
-  const handleSignOut = async () => {
-    await AuthService.logout();
-    onClose();
-    onLogout();
+  const handleSignOut = () => {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          await AuthService.logout();
+          onClose();
+          onLogout();
+        },
+      },
+    ]);
   };
 
   const email = session?.email || 'guest@local.offline';

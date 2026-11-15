@@ -18,6 +18,7 @@ import {
 import { useTheme } from '../theme/ThemeContext';
 import { AuthSession } from '../services/auth';
 import { getOperationalDate } from '../core/recurrence';
+import { CONFIG } from '../config';
 import { getStyles } from './FeedbackModal.styles';
 
 type FeedbackCategory = 'bug' | 'feature' | 'compliment';
@@ -52,7 +53,7 @@ export const FeedbackModal: React.FC<Props> = ({ visible, session, onClose }) =>
 
   const opInfo = useMemo(() => getOperationalDate(), []);
 
-  const diagnosticsSummary = `• Laya Native Mobile v1.0.0\n• OS: ${Platform.OS} (v${Platform.Version})\n• Date: ${opInfo.dateString}\n• Privacy: 0 PII, 0 Location, 0 Trackers`;
+  const diagnosticsSummary = `• Laya Native Mobile v${CONFIG.APP_VERSION}\n• OS: ${Platform.OS} (v${Platform.Version})\n• Date: ${opInfo.dateString}\n• Privacy: 0 PII, 0 Location, 0 Trackers`;
 
   const handleSubmit = async () => {
     if (!message.trim()) return;

@@ -83,6 +83,20 @@ export const getStyles = (colors: ColorPalette) =>
       fontSize: 11,
       marginRight: 6,
     },
+    statusBadge: {
+      fontSize: 10,
+      color: colors.warning,
+      backgroundColor: 'rgba(234, 179, 8, 0.15)',
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      marginRight: 6,
+      fontWeight: '600',
+    },
+    statusBadgeDone: {
+      color: colors.done,
+      backgroundColor: 'rgba(52, 211, 153, 0.15)',
+    },
     iconBtn: {
       padding: 6,
     },
@@ -112,7 +126,33 @@ export const getStyles = (colors: ColorPalette) =>
     paletteRow: {
       flexDirection: 'row',
       gap: 8,
+      marginBottom: spacing.sm,
+    },
+    lifecycleRow: {
+      flexDirection: 'row',
+      gap: 8,
       marginBottom: spacing.md,
+    },
+    lifecycleBtn: {
+      flex: 1,
+      paddingVertical: 6,
+      borderRadius: radiuses.sm,
+      borderWidth: 1,
+      borderColor: colors.borderSubtle,
+      alignItems: 'center',
+      backgroundColor: colors.bgCard,
+    },
+    lifecycleBtnActive: {
+      borderColor: colors.primary,
+      backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    },
+    lifecycleBtnText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textSecondary,
+    },
+    lifecycleBtnTextActive: {
+      color: colors.primary,
     },
     colorCircle: {
       width: 28,

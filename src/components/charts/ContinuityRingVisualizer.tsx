@@ -1,15 +1,15 @@
 /**
  * Laya (లయ) Mobile — Continuity Ring Visualizer (ADR-0004, ADR-0012)
- * Radial streak dial and consistency statistics.
+ * Radial rhythm dial and rhythm ratio consistency statistics.
  */
 
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
 import { useTheme } from '../../theme/ThemeContext';
-import { ColorPalette, darkColors, spacing, radiuses, typography } from '../../theme/tokens';
+import { ColorPalette, darkColors, spacing, typography } from '../../theme/tokens';
 import { Task, CompletionEvent } from '../../core/types';
-import { getOperationalDate } from '../../core/recurrence';
+import { getOperationalDate, isTaskScheduledForDate } from '../../core/recurrence';
 import { evaluateTaskProgress } from '../../core/math';
 
 interface Props {
@@ -24,34 +24,36 @@ export const ContinuityRingVisualizer: React.FC<Props> = ({ task, events, daysCo
 
   const stats = useMemo(() => {
     const now = new Date();
-    let completedDays = 0;
-    let ignoredDays = 0;
-    let streak = 0;
-    let streakBroken = false;
+    let scheduledDays = 0;
+    let activeDays = 0;
+    let restDays = 0;
 
     for (let i = 0; i < daysCount; i++) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const op = getOperationalDate(d);
+
+      const isPreCreation = !!task.createdAt && op.dateString < getOperationalDate(new Date(task.createdAt)).dateString;
+      if (isPreCreation) continue;
+
+      if (!isTaskScheduledForDate(task, op)) continue;
+
+      scheduledDays++;
       const dayEvents = events.filter(
         (e) => (e.taskId === task.id || !e.taskId) && getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString
       );
       const evaluated = evaluateTaskProgress(task, dayEvents);
 
-      if (evaluated.isCompleted) {
-        completedDays++;
-        if (!streakBroken) streak++;
+      if (evaluated.isCompleted || evaluated.percentage >= 100) {
+        activeDays++;
       } else if (evaluated.isIgnored) {
-        ignoredDays++;
-        // Guilt-free: rest day preserves streak!
-      } else {
-        if (i > 0) streakBroken = true;
+        restDays++;
       }
     }
 
-    const denominator = Math.max(1, daysCount - ignoredDays);
-    const score = Math.min(100, Math.round((completedDays / denominator) * 100));
-    return { score, completedDays, ignoredDays, streak };
+    const effectiveScheduled = Math.max(1, scheduledDays - restDays);
+    const score = scheduledDays > 0 ? Math.min(100, Math.round((activeDays / effectiveScheduled) * 100)) : 100;
+    return { score, activeDays, scheduledDays, restDays };
   }, [events, task, daysCount]);
 
   const size = 96;
@@ -94,16 +96,16 @@ export const ContinuityRingVisualizer: React.FC<Props> = ({ task, events, daysCo
 
       <View style={styles.statsCol}>
         <View style={styles.statItem}>
-          <Text style={styles.statVal}>🔥 {stats.streak} Days</Text>
-          <Text style={styles.statDesc}>Current Active Cadence</Text>
+          <Text style={styles.statVal}>⚡ {stats.activeDays} / {stats.scheduledDays} Active Days</Text>
+          <Text style={styles.statDesc}>Scheduled Rhythm Cadence</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statVal}>✓ {stats.completedDays} / {daysCount} Days</Text>
-          <Text style={styles.statDesc}>Completed in Period</Text>
+          <Text style={styles.statVal}>🎯 {stats.score}% Rhythm Ratio</Text>
+          <Text style={styles.statDesc}>Consistency in Period</Text>
         </View>
-        {stats.ignoredDays > 0 && (
+        {stats.restDays > 0 && (
           <View style={styles.statItem}>
-            <Text style={styles.statVal}>☕ {stats.ignoredDays} Rest Days</Text>
+            <Text style={styles.statVal}>☕ {stats.restDays} Rest Days</Text>
             <Text style={styles.statDesc}>Guilt-Free Exemptions</Text>
           </View>
         )}
