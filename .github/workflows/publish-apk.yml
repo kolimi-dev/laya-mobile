@@ -1,9 +1,11 @@
 name: Publish Standalone APK & Update Manifest
 
 on:
-  push:
+  pull_request:
     branches:
       - publish
+    types:
+      - closed
   workflow_dispatch:
 
 permissions:
@@ -13,12 +15,13 @@ jobs:
   publish-apk:
     name: Build Preview APK & Update Manifest
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/publish'
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
+          ref: publish
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js 22
@@ -79,6 +82,6 @@ jobs:
             echo "No changes in version.json to commit."
           else
             git commit -m "chore(release): auto-publish APK manifest [skip ci]"
-            git push origin HEAD:${{ github.ref }}
+            git push origin HEAD:publish
           fi
 
