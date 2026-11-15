@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { EvaluatedTask, UserGroup, Task, CompletionEvent, UserDashboard, PinnedChart } from '../core/types';
 import { TaskCard } from '../components/TaskCard';
+import { DraggableTaskCard } from '../components/DraggableTaskCard';
 import { useReorderList } from '../hooks/useReorderList';
 import { getStyles } from './TodayTasksScreen.styles';
 
@@ -30,6 +31,7 @@ interface Props {
   onNavigateToDashboard?: (dashboardId: string) => void;
   onOpenFeedback?: () => void;
   onReorderTasks?: (taskIds: string[]) => void;
+  onSetLifecycleStatus?: (taskId: string, status: 'active' | 'completed' | 'paused' | 'retired') => void;
 }
 
 export const TodayTasksScreen: React.FC<Props> = ({
@@ -50,13 +52,14 @@ export const TodayTasksScreen: React.FC<Props> = ({
   onNavigateToDashboard,
   onOpenFeedback,
   onReorderTasks,
+  onSetLifecycleStatus,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const [showFeedback, setShowFeedback] = useState(false);
   const [accordionOpen, setAccordionOpen] = useState(remainingTasks.length === 0);
 
-  const { isRearrangeMode, toggleRearrangeMode, moveUp, moveDown } = useReorderList({
+  const { isRearrangeMode, toggleRearrangeMode, moveUp, moveDown, handleDeepPressLift } = useReorderList({
     items: remainingTasks,
     keyExtractor: (t) => t.task.id,
     onCommitOrder: (orderedKeys) => onReorderTasks?.(orderedKeys),
@@ -81,37 +84,36 @@ export const TodayTasksScreen: React.FC<Props> = ({
   };
 
   const renderCard = (item: EvaluatedTask, idx?: number, total?: number) => {
-    const cardEl = (
-      <TaskCard
-        key={item.task.id} evaluated={item} group={groups.find((g) => g.id === item.task.groupId)}
-        events={events} dashboards={dashboards} pinnedCharts={pinnedCharts}
-        onToggleComplete={onToggleComplete} onToggleMilestone={onToggleMilestone}
-        onSkipMilestone={onSkipMilestone} onUpdateQuantified={onUpdateQuantified}
-        onSetQuantifiedExact={onSetQuantifiedExact} onToggleIgnore={onToggleIgnore}
-        onEditTask={onEditTask} onDeleteTask={onDeleteTask} onNavigateToDashboard={onNavigateToDashboard}
-      />
+    return (
+      <DraggableTaskCard
+        key={item.task.id}
+        id={item.task.id}
+        index={idx ?? 0}
+        total={total ?? 1}
+        isRearrangeMode={isRearrangeMode && typeof idx === 'number'}
+        onMoveUp={moveUp}
+        onMoveDown={moveDown}
+        onLongPressLift={handleDeepPressLift}
+      >
+        <TaskCard
+          evaluated={item}
+          group={groups.find((g) => g.id === item.task.groupId)}
+          events={events}
+          dashboards={dashboards}
+          pinnedCharts={pinnedCharts}
+          onToggleComplete={onToggleComplete}
+          onToggleMilestone={onToggleMilestone}
+          onSkipMilestone={onSkipMilestone}
+          onUpdateQuantified={onUpdateQuantified}
+          onSetQuantifiedExact={onSetQuantifiedExact}
+          onToggleIgnore={onToggleIgnore}
+          onEditTask={onEditTask}
+          onDeleteTask={onDeleteTask}
+          onNavigateToDashboard={onNavigateToDashboard}
+          onSetLifecycleStatus={onSetLifecycleStatus}
+        />
+      </DraggableTaskCard>
     );
-
-    if (isRearrangeMode && typeof idx === 'number' && typeof total === 'number') {
-      return (
-        <View key={item.task.id} style={styles.reorderCardWrap}>
-          <View style={styles.reorderOverlayRow}>
-            {idx > 0 && (
-              <TouchableOpacity style={styles.reorderBtn} onPress={() => moveUp(item.task.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={styles.reorderBtnText}>▲ Move Up</Text>
-              </TouchableOpacity>
-            )}
-            {idx < total - 1 && (
-              <TouchableOpacity style={styles.reorderBtn} onPress={() => moveDown(item.task.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={styles.reorderBtnText}>▼ Move Down</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          {cardEl}
-        </View>
-      );
-    }
-    return cardEl;
   };
 
   return (

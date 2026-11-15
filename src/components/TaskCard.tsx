@@ -30,6 +30,7 @@ interface Props {
   onEditTask?: (task: Task) => void;
   onDeleteTask?: (taskId: string, title: string) => void;
   onNavigateToDashboard?: (dashboardId: string) => void;
+  onSetLifecycleStatus?: (taskId: string, status: 'active' | 'completed' | 'paused' | 'retired') => void;
 }
 
 export const TaskCard: React.FC<Props> = ({
@@ -46,6 +47,7 @@ export const TaskCard: React.FC<Props> = ({
   onToggleIgnore,
   onEditTask,
   onNavigateToDashboard,
+  onSetLifecycleStatus,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -206,6 +208,7 @@ export const TaskCard: React.FC<Props> = ({
           onOpenRestModal={() => setRestModalOpen(true)}
           onEditTask={onEditTask}
           onNavigateToDashboard={onNavigateToDashboard}
+          onSetLifecycleStatus={onSetLifecycleStatus}
         />
       )}
 

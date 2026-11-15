@@ -16,6 +16,7 @@ interface Props {
   onDeleteTask: (taskId: string, title: string) => void;
   onAddNew: () => void;
   onPinChart?: (taskId: string) => void;
+  onSetLifecycleStatus?: (taskId: string, status: 'active' | 'completed' | 'paused' | 'retired') => void;
 }
 
 export const AllHabitsScreen: React.FC<Props> = ({
@@ -25,13 +26,18 @@ export const AllHabitsScreen: React.FC<Props> = ({
   onDeleteTask,
   onAddNew,
   onPinChart,
+  onSetLifecycleStatus,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
 
   const activeHabits = useMemo(() => {
-    return tasks.filter((t) => !t.deletedAt && !t.archivedAt && (t.lifecycleStatus || 'active') === 'active');
+    return tasks.filter((t) => {
+      if (t.deletedAt || t.archivedAt) return false;
+      if (t.lifecycleStatus && t.lifecycleStatus !== 'active') return false;
+      return true;
+    });
   }, [tasks]);
 
   const filtered = useMemo(() => {
@@ -133,6 +139,36 @@ export const AllHabitsScreen: React.FC<Props> = ({
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <Text style={styles.actionBtnText}>📊</Text>
+                      </TouchableOpacity>
+                    )}
+                    {onSetLifecycleStatus && (
+                      <TouchableOpacity
+                        style={styles.actionBtn}
+                        onPress={() => {
+                          Alert.alert('Pause Habit', `Pause "${t.title}"? It will move to Inactive Habits.`, [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Pause', style: 'destructive', onPress: () => onSetLifecycleStatus(t.id, 'paused') },
+                          ]);
+                        }}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={styles.actionBtnText}>⏸️</Text>
+                      </TouchableOpacity>
+                    )}
+                    {onSetLifecycleStatus && (
+                      <TouchableOpacity
+                        style={styles.actionBtn}
+                        onPress={() => {
+                          Alert.alert('Complete Routine', `Mark "${t.title}" as completed? It will move to Inactive Habits.`, [
+                            { text: 'Cancel', style: 'cancel' },
+                            { text: 'Complete', onPress: () => onSetLifecycleStatus(t.id, 'completed') },
+                          ]);
+                        }}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={styles.actionBtnText}>🏁</Text>
                       </TouchableOpacity>
                     )}
                     <TouchableOpacity style={styles.actionBtn} onPress={() => onEditTask(t)} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>

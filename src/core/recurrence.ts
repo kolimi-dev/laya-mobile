@@ -53,7 +53,7 @@ export function isTaskScheduledForDate(
   task: Task,
   opInfo: OperationalDateInfo
 ): boolean {
-  if (task.archivedAt || task.deletedAt) return false;
+  if (task.archivedAt || task.deletedAt || (task.lifecycleStatus && task.lifecycleStatus !== 'active')) return false;
 
   // Allow new habits to be backfilled for past 7 days prior to their creation operational day
   if (task.createdAt) {
