@@ -28,11 +28,11 @@ const GUIDE_SLIDES: GuideSlide[] = [
   },
   {
     icon: '🎯',
-    title: 'Three Habit Flavors',
+    title: 'Four Habit Flavors',
     subtitle: 'Tailored for every routine',
     description:
-      '1. Checklist: Simple daily check-off.\n2. Milestones: Step-by-step progress points.\n3. Quantified: Number targets like 4 Liters or 10 Pages.',
-    tags: ['Checklist', 'Milestones', 'Quantified Targets'],
+      '1. Checklist: Simple daily check-off.\n2. Milestones: Step-by-step progress points.\n3. Quantified: Measurable targets like 4 Liters or 10 Pages.\n4. Flexible Baseline: Exceedable goals with bonus progress.',
+    tags: ['Checklist', 'Milestones', 'Quantified', 'Flexible Baseline'],
   },
   {
     icon: '☕',
@@ -43,12 +43,12 @@ const GUIDE_SLIDES: GuideSlide[] = [
     tags: ['Rest Exemptions', 'Zero Guilt', 'Honest Cadence'],
   },
   {
-    icon: '🌙',
-    title: 'Night Owl Rollover',
-    subtitle: 'Cutoff at 03:00 AM',
+    icon: '⚡',
+    title: 'Rhythm Ratio, Not Streaks',
+    subtitle: 'Consistency without fragility',
     description:
-      'Real lives don’t sleep at midnight. Your operational day rolls over at 03:00 AM. Completing a habit at 1:30 AM counts for your waking day, not tomorrow.',
-    tags: ['Circadian Friendly', '03:00 AM Offset'],
+      'Never lose your progress to an arbitrary broken streak. Laya measures your Rhythm Ratio (Active / Scheduled Days), honoring intentional rest without penalties.',
+    tags: ['Rhythm Ratio', 'Guilt-Free', 'Sustainable'],
   },
   {
     icon: '🛡️',
