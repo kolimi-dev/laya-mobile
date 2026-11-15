@@ -1,6 +1,6 @@
 /**
  * Laya (లయ) Mobile — Application Configuration
- * Centralized endpoint tokens and runtime environment standards
+ * Centralized endpoint tokens and runtime environment standards (v1.2.0)
  */
 
 export const CONFIG = {
