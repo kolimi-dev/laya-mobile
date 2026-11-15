@@ -49,6 +49,7 @@ interface Props {
   onPurgeTask: (taskId: string) => Promise<void>;
   onEmptyTrash: () => Promise<void>;
   onAddNewTask: () => void;
+  onReorderTasks?: (ids: string[]) => void;
 }
 
 export const AppScreensView: React.FC<Props> = (props) => {
@@ -72,6 +73,7 @@ export const AppScreensView: React.FC<Props> = (props) => {
           onDeleteTask={props.onDeleteTask}
           onNavigateToDashboard={props.onNavigateToDashboard}
           onOpenFeedback={props.onOpenFeedback}
+          onReorderTasks={props.onReorderTasks}
         />
       )}
       {props.activeView === 'tasks' && props.horizonMode === 'upcoming' && (
@@ -100,6 +102,7 @@ export const AppScreensView: React.FC<Props> = (props) => {
           onEditTask={props.onEditTask}
           onDeleteTask={props.onDeleteTask}
           onAddNew={props.onAddNewTask}
+          onPinChart={(id) => props.onPinChart(id)}
         />
       )}
       {props.activeView === 'not_active' && (

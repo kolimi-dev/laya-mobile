@@ -41,6 +41,7 @@ export function useDerivedTrackerState({
         if (activeGroupId && t.groupId !== activeGroupId) return false;
         return isTaskScheduledForDate(t, opInfo);
       })
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
       .map((t) => evaluateTaskProgress(t, filterEventsForTaskCadence(t, events, opInfo)));
   }, [tasks, events, activeGroupId, opInfo, inactiveGroupIds]);
 

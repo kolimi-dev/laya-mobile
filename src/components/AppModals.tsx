@@ -55,6 +55,7 @@ export interface AppModalsProps {
   onDismissWhatsNew: () => void;
   privacyVisible: boolean;
   onClosePrivacy: () => void;
+  onReorderGroups?: (groupIds: string[]) => Promise<void>;
 }
 
 export const AppModals: React.FC<AppModalsProps> = (props) => {
@@ -115,6 +116,7 @@ export const AppModals: React.FC<AppModalsProps> = (props) => {
         onCreateGroup={props.onCreateGroup}
         onUpdateGroup={props.onUpdateGroup}
         onDeleteGroup={props.onDeleteGroup}
+        onReorderGroups={props.onReorderGroups}
       />
     </>
   );

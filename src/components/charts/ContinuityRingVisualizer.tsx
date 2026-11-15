@@ -18,6 +18,8 @@ interface Props {
   daysCount?: number;
 }
 
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 export const ContinuityRingVisualizer: React.FC<Props> = ({ task, events, daysCount = 30 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -28,22 +30,30 @@ export const ContinuityRingVisualizer: React.FC<Props> = ({ task, events, daysCo
     let activeDays = 0;
     let restDays = 0;
 
+    const oldestDate = new Date(now);
+    oldestDate.setDate(oldestDate.getDate() - (daysCount - 1));
+    const startOp = getOperationalDate(oldestDate);
+    const endOp = getOperationalDate(now);
+    const dateRangeStr = `${MONTH_NAMES[startOp.month]} ${startOp.dayOfMonth} – ${MONTH_NAMES[endOp.month]} ${endOp.dayOfMonth}`;
+
     for (let i = 0; i < daysCount; i++) {
       const d = new Date(now);
       d.setDate(d.getDate() - i);
       const op = getOperationalDate(d);
 
-      const isPreCreation = !!task.createdAt && op.dateString < getOperationalDate(new Date(task.createdAt)).dateString;
-      if (isPreCreation) continue;
-
-      if (!isTaskScheduledForDate(task, op)) continue;
-
-      scheduledDays++;
       const dayEvents = events.filter(
         (e) => (e.taskId === task.id || !e.taskId) && getOperationalDate(new Date(e.occurredAt)).dateString === op.dateString
       );
       const evaluated = evaluateTaskProgress(task, dayEvents);
+      const hasActivity = evaluated.isCompleted || evaluated.percentage > 0 || evaluated.isIgnored;
 
+      const isPreCreation = !!task.createdAt && op.dateString < getOperationalDate(new Date(task.createdAt)).dateString;
+      // Fix: Only skip pre-creation days if unlogged. Honor backfilled effort!
+      if (isPreCreation && !hasActivity) continue;
+
+      if (!isTaskScheduledForDate(task, op)) continue;
+
+      scheduledDays++;
       if (evaluated.isCompleted || evaluated.percentage >= 100) {
         activeDays++;
       } else if (evaluated.isIgnored) {
@@ -53,7 +63,7 @@ export const ContinuityRingVisualizer: React.FC<Props> = ({ task, events, daysCo
 
     const effectiveScheduled = Math.max(1, scheduledDays - restDays);
     const score = scheduledDays > 0 ? Math.min(100, Math.round((activeDays / effectiveScheduled) * 100)) : 100;
-    return { score, activeDays, scheduledDays, restDays };
+    return { score, activeDays, scheduledDays, restDays, dateRangeStr };
   }, [events, task, daysCount]);
 
   const size = 96;
@@ -95,6 +105,9 @@ export const ContinuityRingVisualizer: React.FC<Props> = ({ task, events, daysCo
       </View>
 
       <View style={styles.statsCol}>
+        <View style={styles.horizonBadge}>
+          <Text style={styles.horizonText}>📅 {stats.dateRangeStr}</Text>
+        </View>
         <View style={styles.statItem}>
           <Text style={styles.statVal}>⚡ {stats.activeDays} / {stats.scheduledDays} Active Days</Text>
           <Text style={styles.statDesc}>Scheduled Rhythm Cadence</Text>
@@ -121,7 +134,15 @@ const getStyles = (colors: ColorPalette = darkColors) =>
     centerTextWrap: { position: 'absolute', alignItems: 'center' },
     centerScore: { color: colors.textPrimary, fontSize: 18, fontWeight: '700' },
     centerLabel: { color: colors.textTertiary, fontSize: 9, textTransform: 'uppercase' },
-    statsCol: { flex: 1, gap: 8 },
+    statsCol: { flex: 1, gap: 6 },
+    horizonBadge: {
+      alignSelf: 'flex-start',
+      backgroundColor: colors.bgInput,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    horizonText: { color: colors.textTertiary, fontSize: 9, fontWeight: '600' },
     statItem: { gap: 1 },
     statVal: { color: colors.textPrimary, fontSize: typography.body, fontWeight: '600' },
     statDesc: { color: colors.textTertiary, fontSize: 10 },

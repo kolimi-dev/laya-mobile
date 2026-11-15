@@ -1,0 +1,84 @@
+name: Publish Standalone APK & Update Manifest
+
+on:
+  push:
+    branches:
+      - publish
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-apk:
+    name: Build Preview APK & Update Manifest
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/publish'
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Install Dependencies
+        run: npm ci --include=dev
+
+      - name: Gate 1: Line Budget Check (< 240 lines)
+        run: npm run lint:lines
+
+      - name: Gate 2: Typecheck (0 Errors)
+        run: npm run typecheck
+
+      - name: Setup Expo & EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Trigger EAS Build & Capture Output
+        id: eas-build
+        run: |
+          echo "🚀 Triggering EAS Android Preview Build..."
+          eas build --platform android --profile preview --non-interactive --json > eas-build-result.json
+          
+          cat eas-build-result.json
+          
+          APK_URL=$(jq -r '.[0].artifacts.buildUrl // .[0].artifacts.applicationArchiveUrl // .artifacts.buildUrl // .artifacts.applicationArchiveUrl // empty' eas-build-result.json)
+          
+          if [ -z "$APK_URL" ] || [ "$APK_URL" = "null" ]; then
+            echo "❌ Failed to capture APK download URL from EAS build output."
+            exit 1
+          fi
+          
+          echo "✅ Captured APK URL: $APK_URL"
+          echo "apk_url=$APK_URL" >> $GITHUB_OUTPUT
+
+      - name: Update version.json Manifest
+        run: |
+          APK_URL="${{ steps.eas-build.outputs.apk_url }}"
+          echo "Updating version.json with APK URL: $APK_URL"
+          
+          jq --arg url "$APK_URL" '.apkUrl = $url' version.json > version.tmp.json && mv version.tmp.json version.json
+          cat version.json
+
+      - name: Commit & Push Updated Manifest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add version.json
+          if git diff --staged --quiet; then
+            echo "No changes in version.json to commit."
+          else
+            git commit -m "chore(release): auto-publish APK manifest [skip ci]"
+            git push origin HEAD:${{ github.ref }}
+          fi
+

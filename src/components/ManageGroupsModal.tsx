@@ -1,23 +1,21 @@
 /**
- * Laya (లయ) Mobile — Manage Groups Modal (ADR-0005, ADR-0016)
- * Full CRUD for habit groups with confirmation on deletion and task remapping
+ * Laya (లయ) Mobile — Manage Groups Modal (ADR-0005, ADR-0016, ADR-0017)
+ * Studio manager for habit categories with live preview, reordering, and lifecycle controls.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Modal,
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { UserGroup, Task } from '../core/types';
+import { GroupEditForm, GROUP_PALETTE } from './GroupEditForm';
 import { getStyles } from './ManageGroupsModal.styles';
-
-const PALETTE = ['#94A3B8', '#38BDF8', '#34D399', '#F472B6', '#FBBF24', '#A78BFA'];
 
 interface Props {
   visible: boolean;
@@ -27,6 +25,7 @@ interface Props {
   onCreateGroup: (name: string, color: string) => Promise<void>;
   onUpdateGroup: (group: UserGroup) => Promise<void>;
   onDeleteGroup: (groupId: string) => Promise<void>;
+  onReorderGroups?: (groupIds: string[]) => Promise<void>;
 }
 
 export const ManageGroupsModal: React.FC<Props> = ({
@@ -37,23 +36,28 @@ export const ManageGroupsModal: React.FC<Props> = ({
   onCreateGroup,
   onUpdateGroup,
   onDeleteGroup,
+  onReorderGroups,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
 
+  const sortedGroups = useMemo(() => {
+    return [...groups].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }, [groups]);
+
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [editColor, setEditColor] = useState(PALETTE[0]);
+  const [editColor, setEditColor] = useState(GROUP_PALETTE[0]);
 
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newColor, setNewColor] = useState(PALETTE[1]);
+  const [newColor, setNewColor] = useState(GROUP_PALETTE[1]);
 
   const startEdit = (g: UserGroup) => {
     setIsAddingNew(false);
     setEditingGroupId(g.id);
     setEditName(g.name);
-    setEditColor(g.color || PALETTE[0]);
+    setEditColor(g.color || GROUP_PALETTE[0]);
   };
 
   const cancelEdit = () => {
@@ -79,9 +83,10 @@ export const ManageGroupsModal: React.FC<Props> = ({
   };
 
   const handleDeleteWithConfirm = (g: UserGroup) => {
+    const taskCount = tasks.filter((t) => !t.deletedAt && t.groupId === g.id).length;
     Alert.alert(
       'Delete Group',
-      `Are you sure you want to delete "${g.name}"?\n\nAny habits in this group will safely be reassigned to another active group.`,
+      `Are you sure you want to delete "${g.name}"?\n\nAny habits in this group (${taskCount}) will safely be reassigned to another active group.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -106,6 +111,18 @@ export const ManageGroupsModal: React.FC<Props> = ({
     setIsAddingNew(false);
   };
 
+  const handleMoveGroup = async (groupId: string, direction: 'up' | 'down') => {
+    const idx = sortedGroups.findIndex((g) => g.id === groupId);
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (idx < 0 || targetIdx < 0 || targetIdx >= sortedGroups.length) return;
+    const reordered = [...sortedGroups];
+    const [moved] = reordered.splice(idx, 1);
+    reordered.splice(targetIdx, 0, moved);
+    if (onReorderGroups) {
+      await onReorderGroups(reordered.map((g) => g.id));
+    }
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -119,60 +136,25 @@ export const ManageGroupsModal: React.FC<Props> = ({
           <Text style={styles.subtitle}>Organize your rhythms into life dimensions</Text>
 
           <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
-            {groups.map((g) => {
+            {sortedGroups.map((g, idx) => {
               const isEditing = editingGroupId === g.id;
               const taskCount = tasks.filter((t) => !t.deletedAt && t.groupId === g.id).length;
 
               if (isEditing) {
                 return (
-                  <View key={g.id} style={styles.editBox}>
-                    <TextInput
-                      style={styles.input}
-                      value={editName}
-                      onChangeText={setEditName}
-                      placeholder="Group name"
-                      placeholderTextColor={colors.textTertiary}
-                      autoFocus
-                    />
-                    <View style={styles.paletteRow}>
-                      {PALETTE.map((c) => (
-                        <TouchableOpacity
-                          key={c}
-                          style={[styles.colorCircle, { backgroundColor: c }, editColor === c && styles.colorCircleSelected]}
-                          onPress={() => setEditColor(c)}
-                        />
-                      ))}
-                    </View>
-                    <View style={styles.lifecycleRow}>
-                      <TouchableOpacity
-                        style={[styles.lifecycleBtn, g.lifecycleStatus === 'paused' && styles.lifecycleBtnActive]}
-                        onPress={() => handleTogglePause(g)}
-                      >
-                        <Text style={[styles.lifecycleBtnText, g.lifecycleStatus === 'paused' && styles.lifecycleBtnTextActive]}>
-                          {g.lifecycleStatus === 'paused' ? '▶️ Resume' : '⏸️ Pause'}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.lifecycleBtn, g.lifecycleStatus === 'completed' && styles.lifecycleBtnActive]}
-                        onPress={() => handleToggleComplete(g)}
-                      >
-                        <Text style={[styles.lifecycleBtnText, g.lifecycleStatus === 'completed' && styles.lifecycleBtnTextActive]}>
-                          {g.lifecycleStatus === 'completed' ? '✓ Mark Active' : '🏁 Complete'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                    <View style={styles.actionsRow}>
-                      <TouchableOpacity style={[styles.actionBtn, styles.cancelBtn]} onPress={cancelEdit}>
-                        <Text style={styles.cancelBtnText}>✕ Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={() => handleDeleteWithConfirm(g)}>
-                        <Text style={styles.deleteBtnText}>🗑️ Delete</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.actionBtn, styles.saveBtn]} onPress={() => handleSaveEdit(g)}>
-                        <Text style={styles.saveBtnText}>✓ Save</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                  <GroupEditForm
+                    key={g.id}
+                    group={g}
+                    name={editName}
+                    color={editColor}
+                    onChangeName={setEditName}
+                    onChangeColor={setEditColor}
+                    onTogglePause={() => handleTogglePause(g)}
+                    onToggleComplete={() => handleToggleComplete(g)}
+                    onSave={() => handleSaveEdit(g)}
+                    onCancel={cancelEdit}
+                    onDelete={() => handleDeleteWithConfirm(g)}
+                  />
                 );
               }
 
@@ -185,43 +167,37 @@ export const ManageGroupsModal: React.FC<Props> = ({
                     {g.lifecycleStatus === 'completed' && <Text style={[styles.statusBadge, styles.statusBadgeDone]}>🏁 Done</Text>}
                     <Text style={styles.countBadge}>{taskCount} {taskCount === 1 ? 'habit' : 'habits'}</Text>
                   </View>
-                  <TouchableOpacity style={styles.iconBtn} onPress={() => startEdit(g)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                    <Text style={styles.iconBtnText}>✏️</Text>
-                  </TouchableOpacity>
+                  <View style={styles.reorderActions}>
+                    {idx > 0 && (
+                      <TouchableOpacity style={styles.reorderArrowBtn} onPress={() => handleMoveGroup(g.id, 'up')} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+                        <Text style={styles.reorderArrowText}>▲</Text>
+                      </TouchableOpacity>
+                    )}
+                    {idx < sortedGroups.length - 1 && (
+                      <TouchableOpacity style={styles.reorderArrowBtn} onPress={() => handleMoveGroup(g.id, 'down')} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+                        <Text style={styles.reorderArrowText}>▼</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity style={styles.iconBtn} onPress={() => startEdit(g)} hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}>
+                      <Text style={styles.iconBtnText}>✏️</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               );
             })}
 
             {isAddingNew ? (
-              <View style={styles.editBox}>
-                <TextInput
-                  style={styles.input}
-                  value={newName}
-                  onChangeText={setNewName}
-                  placeholder="New group name (e.g. Finance)"
-                  placeholderTextColor={colors.textTertiary}
-                  autoFocus
-                />
-                <View style={styles.paletteRow}>
-                  {PALETTE.map((c) => (
-                    <TouchableOpacity
-                      key={c}
-                      style={[styles.colorCircle, { backgroundColor: c }, newColor === c && styles.colorCircleSelected]}
-                      onPress={() => setNewColor(c)}
-                    />
-                  ))}
-                </View>
-                <View style={styles.actionsRow}>
-                  <TouchableOpacity style={[styles.actionBtn, styles.cancelBtn]} onPress={() => setIsAddingNew(false)}>
-                    <Text style={styles.cancelBtnText}>✕ Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionBtn, styles.saveBtn]} onPress={handleCreateNew}>
-                    <Text style={styles.saveBtnText}>✓ Create Group</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              <GroupEditForm
+                isNew
+                name={newName}
+                color={newColor}
+                onChangeName={setNewName}
+                onChangeColor={setNewColor}
+                onSave={handleCreateNew}
+                onCancel={() => setIsAddingNew(false)}
+              />
             ) : (
-              <TouchableOpacity style={styles.addTriggerBtn} onPress={() => { cancelEdit(); setIsAddingNew(true); }}>
+              <TouchableOpacity style={styles.addTriggerBtn} onPress={() => { cancelEdit(); setIsAddingNew(true); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={styles.addTriggerText}>+ New Group</Text>
               </TouchableOpacity>
             )}
@@ -231,3 +207,4 @@ export const ManageGroupsModal: React.FC<Props> = ({
     </Modal>
   );
 };
+

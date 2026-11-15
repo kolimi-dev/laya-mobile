@@ -15,10 +15,10 @@ interface Props {
 }
 
 const HIGHLIGHTS = [
-  { icon: '📊', title: 'Custom Dashboards', desc: 'Create custom routine dashboards and pin dedicated habit charts.' },
-  { icon: '⏳', title: 'Time-Window Selector', desc: 'Sync all charts instantly across 7 days, 30 days, or whole year.' },
-  { icon: '📱', title: 'Country Code Phone Setup', desc: 'Searchable flag picker (+91, +1, etc.) for profile setup.' },
-  { icon: '🎯', title: 'Clean Mental Model', desc: 'Separated how you measure (flavor) from when you do it (schedule).' },
+  { icon: '📈', title: 'Honest Reality Scaling', desc: '100% target baseline with bonus surge visibility (>100%) on volume bars.' },
+  { icon: '🔄', title: 'Retroactive Continuity', desc: 'Accurate ring ratios for backfilled activity with time-horizon badges.' },
+  { icon: '🔍', title: 'Instant Chart Discovery', desc: 'Category-filtered chart modal with live search & 1-tap catalog pin.' },
+  { icon: '⚡', title: 'Routine & Group Reordering', desc: 'Arrange daily routines and life dimensions in your natural order.' },
 ];
 
 export const WhatsNewModal: React.FC<Props> = ({ visible, version, onDismiss }) => {

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { ColorPalette, spacing, radiuses, typography } from '../theme/tokens';
 import { Task, UserGroup } from '../core/types';
@@ -15,6 +15,7 @@ interface Props {
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string, title: string) => void;
   onAddNew: () => void;
+  onPinChart?: (taskId: string) => void;
 }
 
 export const AllHabitsScreen: React.FC<Props> = ({
@@ -23,6 +24,7 @@ export const AllHabitsScreen: React.FC<Props> = ({
   onEditTask,
   onDeleteTask,
   onAddNew,
+  onPinChart,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -120,10 +122,23 @@ export const AllHabitsScreen: React.FC<Props> = ({
                   </View>
 
                   <View style={styles.actionsRow}>
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => onEditTask(t)} activeOpacity={0.7}>
+                    {onPinChart && (
+                      <TouchableOpacity
+                        style={styles.actionBtn}
+                        onPress={() => {
+                          onPinChart(t.id);
+                          Alert.alert('Chart Pinned', `Pinned "${t.title}" to your active dashboard!`);
+                        }}
+                        activeOpacity={0.7}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Text style={styles.actionBtnText}>📊</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => onEditTask(t)} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Text style={styles.actionBtnText}>✏️</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => onDeleteTask(t.id, t.title)} activeOpacity={0.7}>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => onDeleteTask(t.id, t.title)} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Text style={styles.actionBtnText}>🗑️</Text>
                     </TouchableOpacity>
                   </View>

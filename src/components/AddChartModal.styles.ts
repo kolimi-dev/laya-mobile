@@ -57,6 +57,17 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       fontWeight: '700',
       textTransform: 'uppercase',
     },
+    searchInput: {
+      backgroundColor: colors.bgInput,
+      borderColor: colors.borderSubtle,
+      borderWidth: 1,
+      borderRadius: radiuses.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 8,
+      color: colors.textPrimary,
+      fontSize: typography.body,
+      marginBottom: spacing.xs,
+    },
     emptyText: {
       color: colors.textTertiary,
       fontSize: typography.caption,

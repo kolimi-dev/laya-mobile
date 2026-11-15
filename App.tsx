@@ -154,6 +154,7 @@ function MainApp() {
         onPurgeTask={tracker.handlePurgeTask}
         onEmptyTrash={tracker.handleEmptyTrash}
         onAddNewTask={() => { setEditingTask(null); setModalVisible(true); }}
+        onReorderTasks={tracker.handleReorderTasks}
       />
 
       <NavigationDrawer
@@ -194,6 +195,7 @@ function MainApp() {
         onCreateGroup={tracker.handleCreateGroup}
         onUpdateGroup={tracker.handleUpdateGroup}
         onDeleteGroup={tracker.handleDeleteGroup}
+        onReorderGroups={tracker.handleReorderGroups}
         guideVisible={guideVisible}
         onCloseGuide={() => setGuideVisible(false)}
         profileVisible={profileVisible}

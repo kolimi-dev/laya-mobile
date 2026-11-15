@@ -211,6 +211,14 @@ export function useLayaTracker() {
     setGroups((prev) => prev.filter((g) => g.id !== groupId));
     if (activeGroupId === groupId) setActiveGroupId(null);
   };
+  const handleReorderTasks = async (ids: string[]) => {
+    const updated = tasks.map((t) => { const idx = ids.indexOf(t.id); return idx >= 0 ? { ...t, sortOrder: (idx + 1) * 10 } : t; });
+    setTasks(updated); await StorageService.saveAllData(activeUserId, { tasks: updated });
+  };
+  const handleReorderGroups = async (ids: string[]) => {
+    const updated = groups.map((g) => { const idx = ids.indexOf(g.id); return idx >= 0 ? { ...g, sortOrder: (idx + 1) * 10 } : g; });
+    setGroups(updated); await StorageService.saveAllData(activeUserId, { groups: updated });
+  };
   const handleUpdateProfile = async (p: UserProfile) => { await AuthService.saveProfile(p); setProfile(p); };
   const handleLogout = async () => { await AuthService.logout(); setSession(null); setIsAuthSkipped(false); };
 
@@ -219,13 +227,13 @@ export function useLayaTracker() {
     isAuthSkipped, setIsAuthSkipped, isOnline, isSyncing, triggerSync, opInfo,
     activeDateOffset, setActiveDateOffset, activeUserId,
     activeGroupId, setActiveGroupId, groups, tasks, events,
-    handleCreateGroup, handleUpdateGroup, handleDeleteGroup,
+    handleCreateGroup, handleUpdateGroup, handleDeleteGroup, handleReorderGroups,
     dashboards, handleCreateDashboard, handleUpdateDashboard, handleDeleteDashboard,
     pinnedCharts, validPinnedCharts, remainingTasks, completedOrRestedTasks, consistencyScore,
     handleToggleComplete, handleToggleMilestone,
     handleSkipMilestone, handleUpdateQuantified, handleSetQuantifiedExact,
     handleToggleIgnore, handlePinTaskChart, handleMoveChart,
     handleRemoveChart, handleSaveNewTask, handleDeleteTask, handleRestoreTask,
-    handlePurgeTask, handleEmptyTrash, handleSetLifecycleStatus, handleLogout,
+    handlePurgeTask, handleEmptyTrash, handleSetLifecycleStatus, handleReorderTasks, handleLogout,
   };
 }

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Modal, View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { Task, UserGroup, TaskFlavor, ChartVisualizerStyle } from '../core/types';
 import { getStyles } from './AddChartModal.styles';
@@ -57,14 +57,20 @@ export const AddChartModal: React.FC<Props> = ({
     );
   }, [tasks]);
 
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(groups[0]?.id || null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [selectedStyle, setSelectedStyle] = useState<ChartVisualizerStyle>('volume_bars');
 
   const filteredTasks = useMemo(() => {
-    if (!selectedGroupId) return eligibleTasks;
-    return eligibleTasks.filter((t) => t.groupId === selectedGroupId);
-  }, [eligibleTasks, selectedGroupId]);
+    let list = eligibleTasks;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      return list.filter((t) => t.title.toLowerCase().includes(q) || (t.unit && t.unit.toLowerCase().includes(q)));
+    }
+    if (!selectedGroupId) return list;
+    return list.filter((t) => t.groupId === selectedGroupId);
+  }, [eligibleTasks, selectedGroupId, searchQuery]);
 
   useEffect(() => {
     if (!filteredTasks.some((t) => t.id === selectedTaskId)) {
@@ -108,40 +114,50 @@ export const AddChartModal: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
 
+          <TextInput
+            style={styles.searchInput}
+            placeholder="🔍 Search habits to chart..."
+            placeholderTextColor={colors.textTertiary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
             {/* Step 1: Category-First Selection */}
-            <View style={styles.section}>
-              <Text style={styles.sectionHeading}>1. Pick Category</Text>
-              <View style={styles.pillList}>
-                <TouchableOpacity
-                  style={[styles.groupPill, selectedGroupId === null && styles.groupPillActive]}
-                  onPress={() => setSelectedGroupId(null)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.groupPillText, selectedGroupId === null && styles.groupPillTextActive]}>
-                    All ({eligibleTasks.length})
-                  </Text>
-                </TouchableOpacity>
+            {!searchQuery.trim() && (
+              <View style={styles.section}>
+                <Text style={styles.sectionHeading}>1. Pick Category</Text>
+                <View style={styles.pillList}>
+                  <TouchableOpacity
+                    style={[styles.groupPill, selectedGroupId === null && styles.groupPillActive]}
+                    onPress={() => setSelectedGroupId(null)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.groupPillText, selectedGroupId === null && styles.groupPillTextActive]}>
+                      All ({eligibleTasks.length})
+                    </Text>
+                  </TouchableOpacity>
 
-                {groups.map((grp) => {
-                  const count = eligibleTasks.filter((t) => t.groupId === grp.id).length;
-                  const isSel = selectedGroupId === grp.id;
-                  return (
-                    <TouchableOpacity
-                      key={grp.id}
-                      style={[styles.groupPill, isSel && styles.groupPillActive]}
-                      onPress={() => setSelectedGroupId(grp.id)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={[styles.groupDot, { backgroundColor: grp.color }]} />
-                      <Text style={[styles.groupPillText, isSel && styles.groupPillTextActive]}>
-                        {grp.name} ({count})
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                  {groups.map((grp) => {
+                    const count = eligibleTasks.filter((t) => t.groupId === grp.id).length;
+                    const isSel = selectedGroupId === grp.id;
+                    return (
+                      <TouchableOpacity
+                        key={grp.id}
+                        style={[styles.groupPill, isSel && styles.groupPillActive]}
+                        onPress={() => setSelectedGroupId(grp.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[styles.groupDot, { backgroundColor: grp.color }]} />
+                        <Text style={[styles.groupPillText, isSel && styles.groupPillTextActive]}>
+                          {grp.name} ({count})
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Step 2: Pick Habit */}
             <View style={styles.section}>
