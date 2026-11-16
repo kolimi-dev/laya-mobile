@@ -112,10 +112,15 @@ export function useDerivedTrackerState({
     [tasks, pinnedCharts]
   );
 
-  const validPinnedCharts = useMemo(
-    () => pinnedCharts.filter((c) => tasks.some((t) => t.id === c.taskId && !t.deletedAt)),
-    [pinnedCharts, tasks]
-  );
+  const validPinnedCharts = useMemo(() => {
+    const seen = new Set<string>();
+    return pinnedCharts.filter((c) => {
+      const key = `${c.dashboardId || ''}:${c.taskId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return tasks.some((t) => t.id === c.taskId && !t.deletedAt);
+    });
+  }, [pinnedCharts, tasks]);
 
   return {
     evaluatedTasks,

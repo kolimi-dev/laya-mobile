@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../theme/ThemeContext';
 import { PinnedChart, Task, CompletionEvent, UserDashboard, UserGroup, TimeWindow, ChartVisualizerStyle } from '../core/types';
@@ -27,7 +27,7 @@ interface Props {
   onCreateDashboard: (dash: UserDashboard) => void;
   onUpdateDashboard?: (dash: UserDashboard) => void;
   onDeleteDashboard?: (dashboardId: string) => void;
-  onPinChart: (taskId: string, style?: ChartVisualizerStyle, dashboardId?: string) => void;
+  onPinChart: (taskId: string, style?: ChartVisualizerStyle, dashboardId?: string) => Promise<{ added: boolean } | void> | { added: boolean } | void;
   onMoveChart: (chartId: string, direction: 'up' | 'down') => void;
   onRemoveChart: (chartId: string) => void;
 }
@@ -213,7 +213,12 @@ export const TaskChartsScreen: React.FC<Props> = ({
         tasks={tasks}
         groups={groups}
         onClose={() => setAddChartOpen(false)}
-        onAddChart={(taskId, style) => onPinChart(taskId, style, activeDashId)}
+        onAddChart={async (taskId, style) => {
+          const res = await onPinChart(taskId, style, activeDashId);
+          if (res && res.added === false) {
+            Alert.alert('Chart Already Pinned', 'A chart for this habit is already on this dashboard.');
+          }
+        }}
       />
     </View>
   );
