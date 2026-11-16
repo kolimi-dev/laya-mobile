@@ -44,7 +44,7 @@ export const CreateTaskModal: React.FC<Props> = ({
   const styles = getStyles(colors);
 
   const [title, setTitle] = useState(''), [groupId, setGroupId] = useState(activeGroupId || groups[0]?.id || 'grp_personal');
-  const [flavor, setFlavor] = useState<TaskFlavor>('checklist'), [frequency, setFrequency] = useState<FrequencyType>('daily');
+  const [flavor, setFlavor] = useState<TaskFlavor>('checklist'), [frequency, setFrequency] = useState<FrequencyType>('one_time');
   const [targetAmount, setTargetAmount] = useState('4'), [stepAmount, setStepAmount] = useState('1'), [unit, setUnit] = useState('L');
   const [milestones, setMilestones] = useState<MilestoneItem[]>([]), [milestoneMode, setMilestoneMode] = useState<MilestoneMode>('all');
   const [baselineCriteria, setBaselineCriteria] = useState<BaselineCriterion[]>([]);
@@ -74,7 +74,7 @@ export const CreateTaskModal: React.FC<Props> = ({
       setTitle('');
       setGroupId(activeGroupId || groups[0]?.id || 'grp_personal');
       setFlavor('checklist');
-      setFrequency('daily');
+      setFrequency('one_time');
       setTargetAmount('4');
       setStepAmount('1');
       setUnit('L');

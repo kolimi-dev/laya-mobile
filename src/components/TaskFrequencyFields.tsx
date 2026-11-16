@@ -11,13 +11,13 @@ import { DayPicker } from './DayPicker';
 import { getStyles } from './CreateTaskModal.styles';
 
 export const FREQUENCIES: { id: FrequencyType; label: string }[] = [
+  { id: 'one_time', label: 'Once' },
   { id: 'daily', label: 'Daily' },
   { id: 'days_of_week', label: 'Specific Days' },
+  { id: 'custom', label: 'Interval' },
   { id: 'monthly', label: 'Monthly' },
   { id: 'yearly', label: 'Yearly' },
-  { id: 'custom', label: 'Interval' },
-  { id: 'one_time', label: 'Specific Date' },
-  { id: 'anytime', label: 'Anytime' },
+  { id: 'anytime', label: 'Whenever' },
 ];
 
 interface Props {
@@ -145,17 +145,17 @@ export const TaskFrequencyFields: React.FC<Props> = ({
             style={styles.input}
             value={targetDate}
             onChangeText={onTargetDateChange}
-            placeholder="2026-11-15"
+            placeholder={new Date().toISOString().split('T')[0]}
             placeholderTextColor={colors.textTertiary}
           />
-          <Text style={styles.helperText}>Due on a single date. Automatically marks completed when done.</Text>
+          <Text style={styles.helperText}>Completes once. Automatically rolls forward if not finished today.</Text>
         </View>
       )}
 
       {frequency === 'anytime' && (
         <View style={styles.field}>
           <Text style={styles.helperText}>
-            No deadline or calendar day. Stays active in your rhythm whenever life allows.
+            No fixed due date. Stays active in your rhythm whenever life allows.
           </Text>
         </View>
       )}

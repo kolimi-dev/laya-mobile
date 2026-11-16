@@ -20,43 +20,43 @@ interface GuideSlide {
 const GUIDE_SLIDES: GuideSlide[] = [
   {
     icon: '🌱',
-    title: 'Natural Rhythm, No Guilt',
-    subtitle: 'Welcome to Laya (లయ)',
+    title: 'Track Habits Without Guilt',
+    subtitle: 'Rhythm over streaks',
     description:
-      'Unlike conventional trackers that punish you with broken streaks, Laya adapts to the reality of life. Track your daily habits with zero anxiety and zero pressure.',
-    tags: ['Pressure-Free', 'Rest Friendly', 'Privacy-First'],
+      'Life happens. Missing one day should not erase weeks of hard work. Laya focuses on your steady routine instead of fragile streaks.\n\nExample: Missed a day? No red cross, no reset to zero. Just keep going tomorrow.',
+    tags: ['No Broken Streaks', 'Zero Guilt', 'Real Life'],
   },
   {
     icon: '🎯',
-    title: 'Four Habit Flavors',
-    subtitle: 'Tailored for every routine',
+    title: 'Pick How You Track',
+    subtitle: 'Simple styles for any habit',
     description:
-      '1. Checklist: Simple daily check-off.\n2. Milestones: Step-by-step progress points.\n3. Quantified: Measurable targets like 4 Liters or 10 Pages.\n4. Flexible Baseline: Exceedable goals with bonus progress.',
-    tags: ['Checklist', 'Milestones', 'Quantified', 'Flexible Baseline'],
+      '• Checklist: Quick 1-tap check-off (e.g. "Take vitamins").\n• Numbers: Track daily amounts (e.g. "Drink 3.5 L water" or "Read 20 pages").\n• Steps: Check off multi-part routines (e.g. "Workout: stretch, cardio, cool down").',
+    tags: ['Checklist', 'Numbers', 'Steps'],
   },
   {
-    icon: '☕',
-    title: 'Guilt-Free Rest',
-    subtitle: 'Resting is part of the cadence',
+    icon: '🌙',
+    title: 'Guilt-Free Rest Days',
+    subtitle: 'Resting is part of life',
     description:
-      'Unwell, traveling, or taking a recovery day? Tap "Rest" on any habit. Rested days are completely exempt from penalties — your rhythm score stays intact.',
-    tags: ['Rest Exemptions', 'Zero Guilt', 'Honest Cadence'],
+      'Feeling sick, traveling, or taking a break? Tap "Rest Day" on any habit. Rested days protect your score with zero penalties.\n\nExample: Rest your "Gym" habit when you have a sore knee or fever.',
+    tags: ['Rest Day', 'Zero Penalties', 'Recovery'],
   },
   {
-    icon: '⚡',
-    title: 'Rhythm Ratio, Not Streaks',
-    subtitle: 'Consistency without fragility',
+    icon: '🔄',
+    title: 'Habits Roll Forward',
+    subtitle: 'Never lose a missed habit',
     description:
-      'Never lose your progress to an arbitrary broken streak. Laya measures your Rhythm Ratio (Active / Scheduled Days), honoring intentional rest without penalties.',
-    tags: ['Rhythm Ratio', 'Guilt-Free', 'Sustainable'],
+      'If you miss a weekly or interval habit, Laya brings it forward to today so you don\'t lose track of it.\n\nExample: Scheduled "Clean desk" for Monday but missed it? It appears on Tuesday so you can still complete it.',
+    tags: ['Auto Carry-Forward', 'Never Miss', 'Flexible'],
   },
   {
     icon: '🛡️',
-    title: 'Offline & Cloud Sync',
-    subtitle: 'Local-first architecture',
+    title: '100% Offline & Private',
+    subtitle: 'Your data stays on your phone',
     description:
-      'Laya functions 100% offline with zero data lag. When you sign in with Kolimi ID, your habits and events sync securely across all your devices.',
-    tags: ['100% Offline', 'Kolimi ID', 'Encrypted Sync'],
+      'Laya works completely offline with zero loading time. When you are ready, sign in with Kolimi ID to back up your habits securely.\n\nExample: Track your habits on a flight or in the subway without any internet.',
+    tags: ['Works Offline', 'Private', 'Secure Backup'],
   },
 ];
 

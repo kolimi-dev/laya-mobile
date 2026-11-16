@@ -75,6 +75,26 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
     field: {
       marginBottom: spacing.md,
     },
+    promptBox: {
+      backgroundColor: colors.bgInput,
+      borderRadius: radiuses.md,
+      padding: spacing.md,
+      marginBottom: spacing.md,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.primary,
+    },
+    promptText: {
+      fontSize: typography.caption,
+      fontWeight: '700',
+      color: colors.textPrimary,
+      marginBottom: 3,
+    },
+    exampleText: {
+      fontSize: typography.caption,
+      color: colors.textSecondary,
+      fontStyle: 'italic',
+      lineHeight: 16,
+    },
     label: {
       fontSize: typography.caption,
       fontWeight: '600',

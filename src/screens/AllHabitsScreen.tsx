@@ -53,8 +53,8 @@ export const AllHabitsScreen: React.FC<Props> = ({
       case 'monthly': return `Monthly (Day ${t.dayOfMonth || 1})`;
       case 'yearly': return `Yearly (${t.monthOfYear || 1}/${t.dayOfMonth || 1})`;
       case 'custom': return `Every ${t.intervalDays || 2} days`;
-      case 'one_time': return `One-time (${t.targetDate || 'Today'})`;
-      case 'anytime': return 'Anytime Backlog';
+      case 'one_time': return `Once (${t.targetDate || 'Today'})`;
+      case 'anytime': return 'Whenever (No Date)';
       default: return 'Active';
     }
   };
