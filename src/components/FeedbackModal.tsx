@@ -29,10 +29,38 @@ interface Props {
   onClose: () => void;
 }
 
-const CATEGORIES: { id: FeedbackCategory; label: string; icon: string }[] = [
-  { id: 'bug', label: 'Bug Report', icon: '🐛' },
-  { id: 'feature', label: 'Feature Idea', icon: '✨' },
-  { id: 'compliment', label: 'Compliment', icon: '❤️' },
+const CATEGORIES: {
+  id: FeedbackCategory;
+  label: string;
+  icon: string;
+  prompt: string;
+  example: string;
+  placeholder: string;
+}[] = [
+  {
+    id: 'bug',
+    label: 'Bug Report',
+    icon: '🐛',
+    prompt: 'What went wrong? Steps to reproduce:',
+    example: 'e.g. "I edited water intake from 2L to 3.5L on yesterday\'s screen, but it stayed at 2L."',
+    placeholder: '1. What happened?\n2. What did you expect?\n3. What screen were you on?',
+  },
+  {
+    id: 'feature',
+    label: 'Feature Idea',
+    icon: '✨',
+    prompt: 'What new feature would help your routine?',
+    example: 'e.g. "A home screen widget to check off remaining habits today without opening the app."',
+    placeholder: 'Describe your idea and how it would improve your daily rhythm...',
+  },
+  {
+    id: 'compliment',
+    label: 'Compliment',
+    icon: '❤️',
+    prompt: 'What part of Laya do you enjoy the most?',
+    example: 'e.g. "The guilt-free Rest Day is awesome—it removed my streak anxiety completely!"',
+    placeholder: 'Tell us what you enjoy about Laya...',
+  },
 ];
 
 export const FeedbackModal: React.FC<Props> = ({ visible, session, onClose }) => {
@@ -41,12 +69,14 @@ export const FeedbackModal: React.FC<Props> = ({ visible, session, onClose }) =>
 
   const [category, setCategory] = useState<FeedbackCategory>('feature');
   const [message, setMessage] = useState('');
+  const [senderName, setSenderName] = useState('');
   const [email, setEmail] = useState('');
   const [includeDiagnostics, setIncludeDiagnostics] = useState(true);
 
   useEffect(() => {
     if (visible) {
       setEmail(session?.email || '');
+      setSenderName('');
       setMessage('');
     }
   }, [visible, session]);
@@ -55,18 +85,27 @@ export const FeedbackModal: React.FC<Props> = ({ visible, session, onClose }) =>
 
   const diagnosticsSummary = `• Laya Native Mobile v${CONFIG.APP_VERSION}\n• OS: ${Platform.OS} (v${Platform.Version})\n• Date: ${opInfo.dateString}\n• Privacy: 0 PII, 0 Location, 0 Trackers`;
 
+  const activeCat = CATEGORIES.find((c) => c.id === category) || CATEGORIES[1];
+
   const handleSubmit = async () => {
     if (!message.trim()) return;
 
-    const catObj = CATEGORIES.find((c) => c.id === category);
-    const catLabel = catObj ? `${catObj.icon} ${catObj.label}` : 'Feedback';
+    const catLabel = `${activeCat.icon} ${activeCat.label}`;
     const previewSubject = message.trim().slice(0, 35);
     const subject = encodeURIComponent(`[Laya Feedback] ${catLabel}: ${previewSubject}...`);
 
-    let bodyText = `${message.trim()}\n\n---\n`;
-    bodyText += `Contact: ${email.trim() || 'Anonymous'}\n`;
+    const senderIdentifier = senderName.trim()
+      ? `${senderName.trim()}${session?.email ? ` (${session.email})` : email.trim() ? ` (${email.trim()})` : ''}`
+      : session?.email || email.trim() || 'Guest (Anonymous)';
+
+    let bodyText = `SENDER IDENTIFICATION:\n`;
+    bodyText += `• Contact: ${senderIdentifier}\n`;
+    if (session?.userId) bodyText += `• Kolimi ID: ${session.userId}\n`;
+    bodyText += `• Category: ${catLabel}\n\n`;
+    bodyText += `FEEDBACK DETAILS:\n${message.trim()}\n\n`;
+    bodyText += `---\n`;
     if (includeDiagnostics) {
-      bodyText += `\nSanitized Diagnostics (Zero PII):\n${diagnosticsSummary}\n`;
+      bodyText += `Sanitized Diagnostics (Zero PII):\n${diagnosticsSummary}\n`;
     }
 
     const mailtoUrl = `mailto:feedback@kolimi.dev?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
@@ -76,16 +115,26 @@ export const FeedbackModal: React.FC<Props> = ({ visible, session, onClose }) =>
       if (canOpen) {
         await Linking.openURL(mailtoUrl);
         onClose();
-      } else {
-        Alert.alert(
-          'Email Client Not Found',
-          'Please send your feedback directly to feedback@kolimi.dev.\n\nThank you for helping improve Laya!',
-          [{ text: 'OK', onPress: onClose }]
-        );
+        return;
       }
-    } catch {
-      Alert.alert('Send Feedback', 'Please email feedback@kolimi.dev', [{ text: 'OK', onPress: onClose }]);
-    }
+    } catch {}
+
+    try {
+      const res = await fetch(`${CONFIG.BACKEND_URL}/api/v1/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: category === 'bug' ? 'bug' : 'feature_request',
+          message: bodyText,
+        }),
+      });
+      if (res.ok) {
+        Alert.alert('Feedback Sent', 'Thank you! Your feedback was received directly.', [{ text: 'OK', onPress: onClose }]);
+        return;
+      }
+    } catch {}
+
+    Alert.alert('Send Feedback', 'Please email feedback@kolimi.dev\n\nThank you for helping improve Laya!', [{ text: 'OK', onPress: onClose }]);
   };
 
   return (
@@ -119,33 +168,34 @@ export const FeedbackModal: React.FC<Props> = ({ visible, session, onClose }) =>
             })}
           </View>
 
+          <View style={styles.promptBox}>
+            <Text style={styles.promptText}>{activeCat.prompt}</Text>
+            <Text style={styles.exampleText}>{activeCat.example}</Text>
+          </View>
+
           <View style={styles.field}>
-            <Text style={styles.label}>Your Feedback or Idea</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="What went well? What could be better? Any features you'd love to see?"
+              placeholder={activeCat.placeholder}
               placeholderTextColor={colors.textTertiary}
               value={message}
               onChangeText={setMessage}
               multiline
-              autoFocus
             />
           </View>
 
-          {!session?.email && (
-            <View style={styles.field}>
-              <Text style={styles.label}>Contact Email (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="friend@example.com"
-                placeholderTextColor={colors.textTertiary}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-          )}
+          <View style={styles.field}>
+            <Text style={styles.label}>
+              {session?.email ? `Your Identity (${session.email})` : 'Your Name or Email (Optional)'}
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder={session?.email ? 'Add your name or handle (e.g. Alex)' : 'friend@example.com or Your Name'}
+              placeholderTextColor={colors.textTertiary}
+              value={senderName}
+              onChangeText={setSenderName}
+            />
+          </View>
 
           <TouchableOpacity
             style={styles.diagnosticsCard}

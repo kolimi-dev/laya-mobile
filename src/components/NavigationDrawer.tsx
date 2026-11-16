@@ -82,13 +82,6 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
       .start(() => onClose());
   };
 
-  const handleSupport = () => {
-    Alert.alert('Support Kolimi', 'Kolimi apps are 100% free, private, and ad-free.\n\nSponsor open infrastructure on GitHub Sponsors.', [
-      { text: 'GitHub Sponsors', onPress: () => Linking.openURL('https://github.com/sponsors/kolimi') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
-
   const handleFeedback = () => {
     if (onOpenFeedback) { handleClose(); onOpenFeedback(); return; }
     Alert.alert('Share Feedback', 'Diagnostics & ideas go directly to feedback@kolimi.dev', [
@@ -206,7 +199,6 @@ export const NavigationDrawer: React.FC<NavigationDrawerProps> = ({
             ) : null}
             <DrawerNavItem icon="📖" label="App Tour & Guide" onPress={() => { handleClose(); onOpenGuide(); }} />
             <DrawerNavItem icon="💬" label="Share Feedback" onPress={handleFeedback} />
-            <DrawerNavItem icon="❤️" label="Support Kolimi" onPress={handleSupport} />
             <DrawerNavItem icon="🛡️" label="Privacy & Ethics" onPress={() => { handleClose(); onOpenPrivacy?.(); }} />
           </ScrollView>
 
