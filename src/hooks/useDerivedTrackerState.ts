@@ -34,22 +34,30 @@ export function useDerivedTrackerState({
     );
   }, [groups]);
 
-  const evaluatedTasks = useMemo<EvaluatedTask[]>(() => {
+  const allEvaluatedTasks = useMemo<EvaluatedTask[]>(() => {
     return tasks
       .filter((t) => {
         if (inactiveGroupIds.has(t.groupId)) return false;
-        if (activeGroupId && t.groupId !== activeGroupId) return false;
         const hasDateEvent = events.some((e) => e.taskId === t.id && (e.targetDate === opInfo.dateString || e.occurredAt.startsWith(opInfo.dateString)) && (e.status === 'completed' || e.status === 'ignored'));
         if (hasDateEvent && !t.deletedAt) return true;
         return isTaskScheduledForDate(t, opInfo);
       })
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
       .map((t) => evaluateTaskProgress(t, filterEventsForTaskCadence(t, events, opInfo)));
-  }, [tasks, events, activeGroupId, opInfo, inactiveGroupIds]);
+  }, [tasks, events, opInfo, inactiveGroupIds]);
+
+  const allRemainingTasks = useMemo(
+    () => allEvaluatedTasks.filter((t) => !t.isCompleted && !t.isIgnored),
+    [allEvaluatedTasks]
+  );
+
+  const evaluatedTasks = useMemo<EvaluatedTask[]>(() => {
+    return activeGroupId ? allEvaluatedTasks.filter((t) => t.task.groupId === activeGroupId) : allEvaluatedTasks;
+  }, [allEvaluatedTasks, activeGroupId]);
 
   const remainingTasks = useMemo(
-    () => evaluatedTasks.filter((t) => !t.isCompleted && !t.isIgnored),
-    [evaluatedTasks]
+    () => (activeGroupId ? allRemainingTasks.filter((t) => t.task.groupId === activeGroupId) : allRemainingTasks),
+    [allRemainingTasks, activeGroupId]
   );
 
   const completedOrRestedTasks = useMemo(
@@ -104,6 +112,7 @@ export function useDerivedTrackerState({
 
   return {
     evaluatedTasks,
+    allRemainingTasks,
     remainingTasks,
     completedOrRestedTasks,
     consistencyScore,

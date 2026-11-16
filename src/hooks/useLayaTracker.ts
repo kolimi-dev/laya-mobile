@@ -80,17 +80,18 @@ export function useLayaTracker() {
     }
   }, [loading, activeUserId, loadUserData, triggerSync]);
 
-  const {
-    evaluatedTasks,
-    remainingTasks,
-    completedOrRestedTasks,
-    consistencyScore,
-    validPinnedCharts,
-  } = useDerivedTrackerState({ tasks, events, pinnedCharts, activeGroupId, opInfo, groups });
+  const { evaluatedTasks, remainingTasks, allRemainingTasks, completedOrRestedTasks, consistencyScore, validPinnedCharts } =
+    useDerivedTrackerState({ tasks, events, pinnedCharts, activeGroupId, opInfo, groups });
 
   const appendEvent = async (eventData: Omit<CompletionEvent, 'id' | 'userId' | 'occurredAt'>, action: string, meta?: Record<string, unknown>) => {
     const nowIso = new Date().toISOString();
-    const occurredAt = activeDateOffset === 0 ? nowIso : new Date(opInfo.year, opInfo.month, opInfo.dayOfMonth, 12, 0, 0).toISOString();
+    let occurredAt = nowIso;
+    if (activeDateOffset !== 0) {
+      const dayEvts = events.filter((e) => e.taskId === eventData.taskId && (e.targetDate === opInfo.dateString || e.occurredAt.startsWith(opInfo.dateString)));
+      occurredAt = dayEvts.length > 0
+        ? new Date(Math.max(...dayEvts.map((e) => new Date(e.occurredAt).getTime())) + 1000).toISOString()
+        : new Date(opInfo.year, opInfo.month, opInfo.dayOfMonth, 12, 0, 0).toISOString();
+    }
     const newEvent: CompletionEvent = { ...eventData, id: generateUUID('evt'), userId: activeUserId, targetDate: opInfo.dateString, recordedAt: nowIso, occurredAt };
     const updated = await StorageService.appendEvent(newEvent, activeUserId);
     setEvents([...updated]);
@@ -192,20 +193,17 @@ export function useLayaTracker() {
   };
   const handleCreateGroup = async (name: string, color: string) => {
     const newGroup: UserGroup = { id: generateUUID('grp'), userId: activeUserId, name, color, sortOrder: groups.length + 1 };
-    await StorageService.saveGroup(newGroup, activeUserId);
-    setGroups((prev) => [...prev, newGroup]);
+    await StorageService.saveGroup(newGroup, activeUserId); setGroups((prev) => [...prev, newGroup]);
   };
   const handleUpdateGroup = async (group: UserGroup) => {
-    await StorageService.saveGroup(group, activeUserId);
-    setGroups((prev) => prev.map((g) => (g.id === group.id ? group : g)));
+    await StorageService.saveGroup(group, activeUserId); setGroups((prev) => prev.map((g) => (g.id === group.id ? group : g)));
   };
   const handleDeleteGroup = async (groupId: string) => {
     const fallbackId = groups.find((g) => g.id !== groupId)?.id || 'grp_personal';
     const updatedTasks = tasks.map((t) => (t.groupId === groupId ? { ...t, groupId: fallbackId } : t));
-    setTasks(updatedTasks);
+    setTasks(updatedTasks); setGroups((prev) => prev.filter((g) => g.id !== groupId));
     await StorageService.saveAllData(activeUserId, { tasks: updatedTasks });
     await StorageService.deleteGroup(groupId, activeUserId);
-    setGroups((prev) => prev.filter((g) => g.id !== groupId));
     if (activeGroupId === groupId) setActiveGroupId(null);
   };
   const handleReorderTasks = async (ids: string[]) => {
@@ -226,7 +224,7 @@ export function useLayaTracker() {
     activeGroupId, setActiveGroupId, groups, tasks, events,
     handleCreateGroup, handleUpdateGroup, handleDeleteGroup, handleReorderGroups,
     dashboards, handleCreateDashboard, handleUpdateDashboard, handleDeleteDashboard,
-    pinnedCharts, validPinnedCharts, remainingTasks, completedOrRestedTasks, consistencyScore,
+    pinnedCharts, validPinnedCharts, remainingTasks, allRemainingTasks, completedOrRestedTasks, consistencyScore,
     handleToggleComplete, handleToggleMilestone,
     handleSkipMilestone, handleUpdateQuantified, handleSetQuantifiedExact,
     handleToggleIgnore, handlePinTaskChart, handleMoveChart,

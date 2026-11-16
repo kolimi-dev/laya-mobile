@@ -36,9 +36,11 @@ export function evaluateTaskProgress(
   events: CompletionEvent[]
 ): EvaluatedTask {
   const taskEvents = events.filter((e) => e.taskId === task.id);
-  const sorted = [...taskEvents].sort(
-    (a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime()
-  );
+  const sorted = [...taskEvents].sort((a, b) => {
+    const diff = new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime();
+    if (diff !== 0) return diff;
+    return (a.recordedAt || a.occurredAt).localeCompare(b.recordedAt || b.occurredAt);
+  });
 
   let currentStatus: 'completed' | 'in_progress' | 'ignored' = 'in_progress';
   let percentage = 0;

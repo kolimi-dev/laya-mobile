@@ -6,12 +6,13 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { Task, UserGroup } from '../core/types';
+import { Task, UserGroup, EvaluatedTask } from '../core/types';
 import { getStyles } from './GroupSelectorDropdown.styles';
 
 export interface GroupSelectorDropdownProps {
   groups: UserGroup[];
   tasks: Task[];
+  remainingTasks?: EvaluatedTask[];
   activeGroupId: string | null;
   onSelectGroup: (groupId: string | null) => void;
   onManageGroups?: () => void;
@@ -20,6 +21,7 @@ export interface GroupSelectorDropdownProps {
 export const GroupSelectorDropdown: React.FC<GroupSelectorDropdownProps> = ({
   groups,
   tasks,
+  remainingTasks,
   activeGroupId,
   onSelectGroup,
   onManageGroups,
@@ -35,18 +37,27 @@ export const GroupSelectorDropdown: React.FC<GroupSelectorDropdownProps> = ({
   const groupCounts = useMemo(() => {
     const map: Record<string, number> = {};
     for (const t of activeHabits) {
-      if (t.groupId) {
-        map[t.groupId] = (map[t.groupId] || 0) + 1;
-      }
+      if (t.groupId) map[t.groupId] = (map[t.groupId] || 0) + 1;
     }
     return map;
   }, [activeHabits]);
+
+  const remainingCounts = useMemo(() => {
+    if (!remainingTasks) return null;
+    const map: Record<string, number> = {};
+    for (const rt of remainingTasks) {
+      if (rt.task.groupId) map[rt.task.groupId] = (map[rt.task.groupId] || 0) + 1;
+    }
+    return map;
+  }, [remainingTasks]);
 
   const selectedGroup = useMemo(() => {
     return groups.find((g) => g.id === activeGroupId) || null;
   }, [groups, activeGroupId]);
 
-  const activeCount = selectedGroup ? (groupCounts[selectedGroup.id] || 0) : activeHabits.length;
+  const activeCount = selectedGroup
+    ? (remainingCounts ? (remainingCounts[selectedGroup.id] || 0) : (groupCounts[selectedGroup.id] || 0))
+    : (remainingTasks ? remainingTasks.length : activeHabits.length);
 
   return (
     <>
@@ -115,7 +126,7 @@ export const GroupSelectorDropdown: React.FC<GroupSelectorDropdownProps> = ({
                       All Groups
                     </Text>
                     <Text style={styles.itemSubtitle}>
-                      {activeHabits.length} {activeHabits.length === 1 ? 'habit' : 'habits'}
+                      {remainingTasks ? `${remainingTasks.length} remaining today` : `${activeHabits.length} ${activeHabits.length === 1 ? 'habit' : 'habits'}`}
                     </Text>
                   </View>
                 </View>
@@ -124,7 +135,7 @@ export const GroupSelectorDropdown: React.FC<GroupSelectorDropdownProps> = ({
 
               {groups.map((grp) => {
                 const isActive = activeGroupId === grp.id;
-                const count = groupCounts[grp.id] || 0;
+                const count = remainingCounts ? (remainingCounts[grp.id] || 0) : (groupCounts[grp.id] || 0);
                 return (
                   <TouchableOpacity
                     key={grp.id}
@@ -142,7 +153,7 @@ export const GroupSelectorDropdown: React.FC<GroupSelectorDropdownProps> = ({
                           {grp.name}
                         </Text>
                         <Text style={styles.itemSubtitle}>
-                          {count} {count === 1 ? 'habit' : 'habits'}
+                          {remainingCounts ? `${count} remaining today` : `${count} ${count === 1 ? 'habit' : 'habits'}`}
                         </Text>
                       </View>
                     </View>

@@ -43,15 +43,15 @@ export const BaselineCriteriaBuilder: React.FC<Props> = ({ criteria, onChange })
   return (
     <View style={styles.container}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Baseline Criteria (Disjunctive OR)</Text>
-        <Text style={styles.subtitle}>Hitting ANY 1 reaches 100%</Text>
+        <Text style={styles.title}>Alternative Ways to Complete</Text>
+        <Text style={styles.subtitle}>Reaching any 1 option completes your rhythm</Text>
       </View>
 
       {criteria.map((crit, idx) => (
         <View key={crit.id} style={styles.criterionCard}>
           <View style={styles.criterionTop}>
             <Text style={styles.criterionNum}>
-              Option {idx + 1} {idx > 0 ? '• OR' : '• Primary'}
+              Option {idx + 1} {idx > 0 ? '• Alternate' : '• Primary'}
             </Text>
             {criteria.length > 1 && (
               <TouchableOpacity

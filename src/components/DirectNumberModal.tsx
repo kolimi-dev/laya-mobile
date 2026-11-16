@@ -45,7 +45,8 @@ export const DirectNumberModal: React.FC<Props> = ({
   }, [visible, currentValue]);
 
   const handleSave = () => {
-    const parsed = parseFloat(textVal);
+    const sanitized = textVal.replace(',', '.');
+    const parsed = parseFloat(sanitized);
     if (!isNaN(parsed) && parsed >= 0) {
       onSave(Math.round(parsed * 100) / 100);
     }

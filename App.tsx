@@ -9,7 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { CONFIG } from './src/config';
 import { Task } from './src/core/types';
-import { isTaskScheduledForDate } from './src/core/recurrence';
+import { isTaskScheduledForDate, getOperationalDate } from './src/core/recurrence';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { getStyles } from './App.styles';
 import { useLayaTracker } from './src/hooks/useLayaTracker';
@@ -74,15 +74,18 @@ function MainApp() {
   const handleSaveTaskWithFeedback = async (task: Task) => {
     await tracker.handleSaveNewTask(task);
     setEditingTask(null);
-    if (!isTaskScheduledForDate(task, tracker.opInfo)) {
-      Alert.alert(
-        'Habit Created',
-        `"${task.title}" was saved successfully.\n\nSince it's not due today, you can find it in the All Habits Catalog.`,
-        [
-          { text: 'View All Habits', onPress: () => setActiveView('all_habits') },
-          { text: 'OK', style: 'default' },
-        ]
-      );
+    if (isTaskScheduledForDate(task, tracker.opInfo)) return;
+    const isDueToday = isTaskScheduledForDate(task, getOperationalDate(new Date()));
+    if (isDueToday && tracker.activeDateOffset !== 0) {
+      Alert.alert('Habit Scheduled for Today', `"${task.title}" is ready on today's rhythm.`, [
+        { text: 'Stay Here', style: 'cancel' },
+        { text: 'Go to Today', onPress: () => tracker.setActiveDateOffset(0) },
+      ]);
+    } else if (!isDueToday) {
+      Alert.alert('Habit Created', `"${task.title}" was saved successfully.\n\nSince it's not due today, you can find it in the All Habits Catalog.`, [
+        { text: 'View All Habits', onPress: () => setActiveView('all_habits') },
+        { text: 'OK', style: 'default' },
+      ]);
     }
   };
 
@@ -111,6 +114,7 @@ function MainApp() {
           <GroupSelectorDropdown
             groups={tracker.groups}
             tasks={tracker.tasks}
+            remainingTasks={tracker.allRemainingTasks ?? tracker.remainingTasks}
             activeGroupId={tracker.activeGroupId}
             onSelectGroup={tracker.setActiveGroupId}
             onManageGroups={() => setManageGroupsVisible(true)}
