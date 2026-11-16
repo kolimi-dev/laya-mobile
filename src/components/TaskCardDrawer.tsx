@@ -4,7 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { Task, UserGroup, CompletionEvent, UserDashboard, PinnedChart } from '../core/types';
 import { speakReminder } from '../services/voice';
@@ -22,6 +22,7 @@ export interface TaskCardDrawerProps {
   onOpenRestModal: () => void;
   onEditTask?: (task: Task) => void;
   onNavigateToDashboard?: (dashboardId: string) => void;
+  onSetLifecycleStatus?: (taskId: string, status: 'active' | 'completed' | 'paused' | 'retired') => void;
 }
 
 export const TaskCardDrawer: React.FC<TaskCardDrawerProps> = ({
@@ -35,6 +36,7 @@ export const TaskCardDrawer: React.FC<TaskCardDrawerProps> = ({
   onOpenRestModal,
   onEditTask,
   onNavigateToDashboard,
+  onSetLifecycleStatus,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -112,6 +114,38 @@ export const TaskCardDrawer: React.FC<TaskCardDrawerProps> = ({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Text style={styles.drawerActionBtnText}>✏️ Edit</Text>
+          </TouchableOpacity>
+        )}
+
+        {onSetLifecycleStatus && (
+          <TouchableOpacity
+            style={styles.drawerActionBtn}
+            onPress={() => {
+              Alert.alert('Pause Habit', `Pause "${task.title}"? It will move to Inactive Habits.`, [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Pause', style: 'destructive', onPress: () => onSetLifecycleStatus(task.id, 'paused') },
+              ]);
+            }}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.drawerActionBtnText}>⏸️ Pause</Text>
+          </TouchableOpacity>
+        )}
+
+        {onSetLifecycleStatus && (
+          <TouchableOpacity
+            style={styles.drawerActionBtn}
+            onPress={() => {
+              Alert.alert('Complete Habit', `Mark "${task.title}" as completed? It will move to Inactive Habits.`, [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Complete', onPress: () => onSetLifecycleStatus(task.id, 'completed') },
+              ]);
+            }}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.drawerActionBtnText}>🏁 Done</Text>
           </TouchableOpacity>
         )}
       </View>

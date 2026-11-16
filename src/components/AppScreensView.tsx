@@ -74,6 +74,7 @@ export const AppScreensView: React.FC<Props> = (props) => {
           onNavigateToDashboard={props.onNavigateToDashboard}
           onOpenFeedback={props.onOpenFeedback}
           onReorderTasks={props.onReorderTasks}
+          onSetLifecycleStatus={props.onSetLifecycleStatus}
         />
       )}
       {props.activeView === 'tasks' && props.horizonMode === 'upcoming' && (
@@ -103,6 +104,7 @@ export const AppScreensView: React.FC<Props> = (props) => {
           onDeleteTask={props.onDeleteTask}
           onAddNew={props.onAddNewTask}
           onPinChart={(id) => props.onPinChart(id)}
+          onSetLifecycleStatus={props.onSetLifecycleStatus}
         />
       )}
       {props.activeView === 'not_active' && (

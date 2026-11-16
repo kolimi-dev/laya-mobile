@@ -53,7 +53,7 @@ export function isTaskScheduledForDate(
   task: Task,
   opInfo: OperationalDateInfo
 ): boolean {
-  if (task.archivedAt || task.deletedAt) return false;
+  if (task.archivedAt || task.deletedAt || (task.lifecycleStatus && task.lifecycleStatus !== 'active')) return false;
 
   // Allow new habits to be backfilled for past 7 days prior to their creation operational day
   if (task.createdAt) {
@@ -155,6 +155,7 @@ export function filterEventsForTaskCadence(
   }
 
   return taskEvents.filter((e) => {
+    if (e.targetDate && e.targetDate === opInfo.dateString) return true;
     const eventOp = getOperationalDate(new Date(e.occurredAt));
     if (task.frequency === 'daily' || task.frequency === 'days_of_week' || task.frequency === 'custom') {
       return eventOp.dateString === opInfo.dateString;
