@@ -209,6 +209,7 @@ export const TaskCard: React.FC<Props> = ({
           onEditTask={onEditTask}
           onNavigateToDashboard={onNavigateToDashboard}
           onSetLifecycleStatus={onSetLifecycleStatus}
+          isRolledForward={evaluated.isRolledForward}
         />
       )}
 

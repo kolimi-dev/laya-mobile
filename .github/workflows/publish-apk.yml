@@ -64,12 +64,13 @@ jobs:
           echo "✅ Captured APK URL: $APK_URL"
           echo "apk_url=$APK_URL" >> $GITHUB_OUTPUT
 
-      - name: Update version.json Manifest
+      - name: Atomically Update version.json Manifest
         run: |
           APK_URL="${{ steps.eas-build.outputs.apk_url }}"
-          echo "Updating version.json with APK URL: $APK_URL"
+          BUILD_VERSION=$(jq -r .version package.json)
+          echo "Updating version.json: version=$BUILD_VERSION, apkUrl=$APK_URL"
           
-          jq --arg url "$APK_URL" '.apkUrl = $url' version.json > version.tmp.json && mv version.tmp.json version.json
+          jq --arg ver "$BUILD_VERSION" --arg url "$APK_URL" '.latestVersion = $ver | .apkUrl = $url' version.json > version.tmp.json && mv version.tmp.json version.json
           cat version.json
 
       - name: Commit & Push Updated Manifest

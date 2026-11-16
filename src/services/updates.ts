@@ -56,10 +56,10 @@ export class UpdateService {
       // Backend offline or network timeout
     }
 
-    // If backend didn't yield a newer version, check the instant GitHub raw manifest
+    // If backend didn't yield a newer version, check the instant GitHub raw manifest on publish branch
     if (!manifest || !UpdateService.isNewerVersion(manifest.latestVersion, CONFIG.APP_VERSION)) {
       try {
-        const fallbackUrl = 'https://raw.githubusercontent.com/kolimi-dev/laya-mobile/main/version.json';
+        const fallbackUrl = 'https://raw.githubusercontent.com/kolimi-dev/laya-mobile/publish/version.json';
         const fallbackRes = await fetch(fallbackUrl);
         if (fallbackRes.ok) {
           const fallback = (await fallbackRes.json()) as AppUpdateManifest;

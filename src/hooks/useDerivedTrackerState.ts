@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { Task, CompletionEvent, PinnedChart, EvaluatedTask, UserGroup } from '../core/types';
 import { calculateConsistencyRating, evaluateTaskProgress } from '../core/math';
 import { isTaskScheduledForDate, filterEventsForTaskCadence, getOperationalDate, OperationalDateInfo } from '../core/recurrence';
+import { shouldTaskRollForward } from '../core/rollover';
 import { getChartRecommendations } from '../services/ai-suggestions';
 
 interface UseDerivedTrackerStateParams {
@@ -40,10 +41,16 @@ export function useDerivedTrackerState({
         if (inactiveGroupIds.has(t.groupId)) return false;
         const hasDateEvent = events.some((e) => e.taskId === t.id && (e.targetDate === opInfo.dateString || e.occurredAt.startsWith(opInfo.dateString)) && (e.status === 'completed' || e.status === 'ignored'));
         if (hasDateEvent && !t.deletedAt) return true;
-        return isTaskScheduledForDate(t, opInfo);
+        if (isTaskScheduledForDate(t, opInfo)) return true;
+        return shouldTaskRollForward(t, opInfo, events);
       })
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-      .map((t) => evaluateTaskProgress(t, filterEventsForTaskCadence(t, events, opInfo)));
+      .map((t) => {
+        const isScheduled = isTaskScheduledForDate(t, opInfo);
+        const evalTask = evaluateTaskProgress(t, filterEventsForTaskCadence(t, events, opInfo));
+        if (!isScheduled) evalTask.isRolledForward = true;
+        return evalTask;
+      });
   }, [tasks, events, opInfo, inactiveGroupIds]);
 
   const allRemainingTasks = useMemo(

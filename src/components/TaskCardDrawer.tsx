@@ -23,6 +23,7 @@ export interface TaskCardDrawerProps {
   onEditTask?: (task: Task) => void;
   onNavigateToDashboard?: (dashboardId: string) => void;
   onSetLifecycleStatus?: (taskId: string, status: 'active' | 'completed' | 'paused' | 'retired') => void;
+  isRolledForward?: boolean;
 }
 
 export const TaskCardDrawer: React.FC<TaskCardDrawerProps> = ({
@@ -37,6 +38,7 @@ export const TaskCardDrawer: React.FC<TaskCardDrawerProps> = ({
   onEditTask,
   onNavigateToDashboard,
   onSetLifecycleStatus,
+  isRolledForward,
 }) => {
   const { colors } = useTheme();
   const styles = getStyles(colors);
@@ -81,6 +83,7 @@ export const TaskCardDrawer: React.FC<TaskCardDrawerProps> = ({
         )}
         {task.frequency === 'monthly' && <View style={styles.metaPill}><Text style={styles.metaPillText}>🗓️ Day {task.dayOfMonth || 1}</Text></View>}
         {task.frequency === 'yearly' && <View style={styles.metaPill}><Text style={styles.metaPillText}>🗓️ {task.monthOfYear || 1}/{task.dayOfMonth || 1}</Text></View>}
+        {isRolledForward && <View style={styles.metaPill}><Text style={styles.metaPillText}>🔄 Brought forward</Text></View>}
         {notes ? <View style={styles.metaPill}><Text style={styles.metaPillText}>💬 {notes}</Text></View> : null}
       </View>
 
