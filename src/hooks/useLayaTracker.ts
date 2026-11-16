@@ -70,11 +70,11 @@ export function useLayaTracker() {
     (async () => {
       const stored = await AuthService.getStoredSession();
       if (stored) setSession(stored);
-      setProfile(await AuthService.getStoredProfile());
+      const prof = await AuthService.getStoredProfile();
+      setProfile(prof);
+      await NotificationService.scheduleEodReviewReminder(prof.sleepingTime || '20:00', prof.eodNotificationsEnabled ?? true);
       const uid = stored?.userId || 'usr_guest';
-      await loadUserData(uid);
-      await logger.init(uid);
-      setLoading(false);
+      await loadUserData(uid); await logger.init(uid); setLoading(false);
     })();
   }, [loadUserData]);
 
@@ -160,8 +160,7 @@ export function useLayaTracker() {
   const handleMoveChart = async (chartId: string, direction: 'up' | 'down') => {
     const idx = pinnedCharts.findIndex((c) => c.id === chartId), targetIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (idx < 0 || targetIdx < 0 || targetIdx >= pinnedCharts.length) return;
-    const list = [...pinnedCharts];
-    [list[idx], list[targetIdx]] = [list[targetIdx], list[idx]];
+    const list = [...pinnedCharts]; [list[idx], list[targetIdx]] = [list[targetIdx], list[idx]];
     setPinnedCharts(list); await StorageService.savePinnedCharts(list, activeUserId);
   };
   const handleRemoveChart = async (chartId: string) => {
@@ -169,8 +168,7 @@ export function useLayaTracker() {
     setPinnedCharts(list); await StorageService.savePinnedCharts(list, activeUserId);
   };
   const handleSaveNewTask = async (task: Task) => {
-    await StorageService.saveTask(task, activeUserId);
-    await NotificationService.scheduleTaskReminder(task);
+    await StorageService.saveTask(task, activeUserId); await NotificationService.scheduleTaskReminder(task);
     setTasks(tasks.some((t) => t.id === task.id) ? tasks.map((t) => (t.id === task.id ? task : t)) : [...tasks, task]);
   };
   const handleDeleteTask = async (taskId: string) => {
@@ -204,8 +202,7 @@ export function useLayaTracker() {
     const fallbackId = groups.find((g) => g.id !== groupId)?.id || 'grp_personal';
     const updatedTasks = tasks.map((t) => (t.groupId === groupId ? { ...t, groupId: fallbackId } : t));
     setTasks(updatedTasks); setGroups((prev) => prev.filter((g) => g.id !== groupId));
-    await StorageService.saveAllData(activeUserId, { tasks: updatedTasks });
-    await StorageService.deleteGroup(groupId, activeUserId);
+    await StorageService.saveAllData(activeUserId, { tasks: updatedTasks }); await StorageService.deleteGroup(groupId, activeUserId);
     if (activeGroupId === groupId) setActiveGroupId(null);
   };
   const handleReorderTasks = async (ids: string[]) => {
@@ -216,7 +213,11 @@ export function useLayaTracker() {
     const updated = groups.map((g) => { const idx = ids.indexOf(g.id); return idx >= 0 ? { ...g, sortOrder: (idx + 1) * 10 } : g; });
     setGroups(updated); await StorageService.saveAllData(activeUserId, { groups: updated });
   };
-  const handleUpdateProfile = async (p: UserProfile) => { await AuthService.saveProfile(p); setProfile(p); };
+  const handleUpdateProfile = async (p: UserProfile) => {
+    await AuthService.saveProfile(p);
+    await NotificationService.scheduleEodReviewReminder(p.sleepingTime || '20:00', p.eodNotificationsEnabled ?? true);
+    setProfile(p);
+  };
   const handleLogout = async () => { await AuthService.logout(); setSession(null); setIsAuthSkipped(false); };
 
   return {

@@ -18,6 +18,8 @@ export interface AuthSession {
 export interface UserProfile {
   name: string;
   phone: string;
+  sleepingTime?: string;
+  eodNotificationsEnabled?: boolean;
 }
 
 export const DEFAULT_BACKEND_URL = CONFIG.BACKEND_URL;
@@ -35,9 +37,18 @@ export class AuthService {
   public static async getStoredProfile(): Promise<UserProfile> {
     try {
       const raw = await AsyncStorage.getItem(PROFILE_KEY);
-      return raw ? JSON.parse(raw) : { name: '', phone: '' };
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          name: parsed.name || '',
+          phone: parsed.phone || '',
+          sleepingTime: parsed.sleepingTime || '20:00',
+          eodNotificationsEnabled: parsed.eodNotificationsEnabled ?? true,
+        };
+      }
+      return { name: '', phone: '', sleepingTime: '20:00', eodNotificationsEnabled: true };
     } catch {
-      return { name: '', phone: '' };
+      return { name: '', phone: '', sleepingTime: '20:00', eodNotificationsEnabled: true };
     }
   }
 
