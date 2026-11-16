@@ -36,3 +36,7 @@ jobs:
       # Gate 3: TypeScript Compilation & Typecheck
       - name: "Gate 3: Typecheck (0 Errors)"
         run: npm run typecheck
+
+      # Gate 4: Release Manifest Race Condition Guard
+      - name: "Gate 4: Release Manifest Integrity"
+        run: npm run lint:manifest

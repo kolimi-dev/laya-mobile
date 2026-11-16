@@ -26,6 +26,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint:lines": "node scripts/check-line-counts.js",
+    "lint:manifest": "node scripts/check-release-manifest.js",
     "typecheck": "tsc --noEmit",
     "audit": "npm audit --audit-level=critical"
   },

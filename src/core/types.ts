@@ -150,4 +150,5 @@ export interface EvaluatedTask {
   isCompleted: boolean;
   isIgnored: boolean;
   isScheduledToday: boolean;
+  isRolledForward?: boolean;
 }
