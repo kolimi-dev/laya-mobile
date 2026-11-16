@@ -72,12 +72,14 @@ export const FeedbackModal: React.FC<Props> = ({ visible, session, onClose }) =>
   const [senderName, setSenderName] = useState('');
   const [email, setEmail] = useState('');
   const [includeDiagnostics, setIncludeDiagnostics] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setEmail(session?.email || '');
       setSenderName('');
       setMessage('');
+      setSubmitting(false);
     }
   }, [visible, session]);
 
@@ -88,53 +90,50 @@ export const FeedbackModal: React.FC<Props> = ({ visible, session, onClose }) =>
   const activeCat = CATEGORIES.find((c) => c.id === category) || CATEGORIES[1];
 
   const handleSubmit = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || submitting) return;
+    setSubmitting(true);
 
+    const effectiveEmail = session?.email || email.trim() || undefined;
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.accessToken) {
+        headers['Authorization'] = `Bearer ${session.accessToken}`;
+      }
+
+      const res = await fetch(`${CONFIG.BACKEND_URL}/api/v1/feedback`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          category: category === 'bug' ? 'bug' : category === 'compliment' ? 'compliment' : 'feature_request',
+          message: message.trim(),
+          senderName: senderName.trim() || undefined,
+          email: effectiveEmail,
+          diagnostics: includeDiagnostics ? diagnosticsSummary : undefined,
+        }),
+      });
+
+      if (res.ok) {
+        setSubmitting(false);
+        Alert.alert('Feedback Received', 'Thank you! Your feedback has been sent directly to the development team.', [
+          { text: 'OK', onPress: onClose },
+        ]);
+        return;
+      }
+    } catch {}
+
+    setSubmitting(false);
     const catLabel = `${activeCat.icon} ${activeCat.label}`;
     const previewSubject = message.trim().slice(0, 35);
     const subject = encodeURIComponent(`[Laya Feedback] ${catLabel}: ${previewSubject}...`);
-
-    const senderIdentifier = senderName.trim()
-      ? `${senderName.trim()}${session?.email ? ` (${session.email})` : email.trim() ? ` (${email.trim()})` : ''}`
-      : session?.email || email.trim() || 'Guest (Anonymous)';
-
-    let bodyText = `SENDER IDENTIFICATION:\n`;
-    bodyText += `• Contact: ${senderIdentifier}\n`;
-    if (session?.userId) bodyText += `• Kolimi ID: ${session.userId}\n`;
-    bodyText += `• Category: ${catLabel}\n\n`;
-    bodyText += `FEEDBACK DETAILS:\n${message.trim()}\n\n`;
-    bodyText += `---\n`;
-    if (includeDiagnostics) {
-      bodyText += `Sanitized Diagnostics (Zero PII):\n${diagnosticsSummary}\n`;
-    }
-
+    const senderId = senderName.trim() || effectiveEmail || 'Guest';
+    const bodyText = `From: ${senderId}\nCategory: ${catLabel}\n\n${message.trim()}\n\n---\n${includeDiagnostics ? diagnosticsSummary : ''}`;
     const mailtoUrl = `mailto:feedback@kolimi.dev?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
 
-    try {
-      const canOpen = await Linking.canOpenURL(mailtoUrl);
-      if (canOpen) {
-        await Linking.openURL(mailtoUrl);
-        onClose();
-        return;
-      }
-    } catch {}
-
-    try {
-      const res = await fetch(`${CONFIG.BACKEND_URL}/api/v1/feedback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          category: category === 'bug' ? 'bug' : 'feature_request',
-          message: bodyText,
-        }),
-      });
-      if (res.ok) {
-        Alert.alert('Feedback Sent', 'Thank you! Your feedback was received directly.', [{ text: 'OK', onPress: onClose }]);
-        return;
-      }
-    } catch {}
-
-    Alert.alert('Send Feedback', 'Please email feedback@kolimi.dev\n\nThank you for helping improve Laya!', [{ text: 'OK', onPress: onClose }]);
+    Alert.alert('Offline / Network Issue', 'Could not send directly. Would you like to open your email app?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Open Email', onPress: async () => { try { await Linking.openURL(mailtoUrl); onClose(); } catch {} } },
+    ]);
   };
 
   return (
@@ -213,12 +212,12 @@ export const FeedbackModal: React.FC<Props> = ({ visible, session, onClose }) =>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.submitBtn, !message.trim() && styles.submitBtnDisabled]}
+              style={[styles.submitBtn, (!message.trim() || submitting) && styles.submitBtnDisabled]}
               onPress={handleSubmit}
-              disabled={!message.trim()}
+              disabled={!message.trim() || submitting}
               activeOpacity={0.8}
             >
-              <Text style={styles.submitBtnText}>Send Feedback</Text>
+              <Text style={styles.submitBtnText}>{submitting ? 'Sending...' : 'Send Feedback'}</Text>
             </TouchableOpacity>
           </View>
         </View>
