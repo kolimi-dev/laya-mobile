@@ -1,6 +1,6 @@
 {
-  "latestVersion": "1.2.2",
-  "apkUrl": "https://expo.dev/artifacts/eas/_uhJjC0jN7nXO7jbVHyrcR8Lf2s9QJcjV1k-yZoX7L4.apk",
+  "latestVersion": "1.2.3",
+  "apkUrl": "https://expo.dev/artifacts/eas/BMTsnXw8bDxRuygY_qhx5Z15Et9RpG_8PnQ_s5F_5pA.apk",
   "releaseNotes": [
     "Direct in-app feedback channel with silent delivery to development team",
     "Task creation defaults to Once (Single occurrence) instead of Daily",
