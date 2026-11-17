@@ -43,7 +43,8 @@ export const CreateTaskModal: React.FC<Props> = ({
   const { colors } = useTheme();
   const styles = getStyles(colors);
 
-  const [title, setTitle] = useState(''), [groupId, setGroupId] = useState(activeGroupId || groups[0]?.id || 'grp_personal');
+  const [title, setTitle] = useState(''), [titleTouched, setTitleTouched] = useState(false);
+  const [groupId, setGroupId] = useState(activeGroupId || groups[0]?.id || 'grp_personal');
   const [flavor, setFlavor] = useState<TaskFlavor>('checklist'), [frequency, setFrequency] = useState<FrequencyType>('one_time');
   const [targetAmount, setTargetAmount] = useState('4'), [stepAmount, setStepAmount] = useState('1'), [unit, setUnit] = useState('L');
   const [milestones, setMilestones] = useState<MilestoneItem[]>([]), [milestoneMode, setMilestoneMode] = useState<MilestoneMode>('all');
@@ -51,46 +52,35 @@ export const CreateTaskModal: React.FC<Props> = ({
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([1, 2, 3, 4, 5]);
   const [dayOfMonth, setDayOfMonth] = useState('1'), [monthOfYear, setMonthOfYear] = useState('1'), [intervalDays, setIntervalDays] = useState('2');
   const [targetDate, setTargetDate] = useState(''), [reminderTime, setReminderTime] = useState('');
+  const isTitleValid = title.trim().length > 0;
 
   useEffect(() => {
+    setTitleTouched(false);
     if (initialTask) {
-      setTitle(initialTask.title);
-      setGroupId(initialTask.groupId);
+      setTitle(initialTask.title); setGroupId(initialTask.groupId);
       setFlavor(initialTask.flavor === 'one_time' ? 'checklist' : initialTask.flavor === 'percentage' ? 'quantified' : initialTask.flavor);
       setFrequency(initialTask.flavor === 'one_time' ? 'one_time' : initialTask.frequency);
       setTargetAmount(initialTask.targetAmount ? String(initialTask.targetAmount) : '4');
       setStepAmount(initialTask.stepAmount ? String(initialTask.stepAmount) : '1');
-      setUnit(initialTask.unit || '');
-      setMilestones(initialTask.milestones || []);
-      setMilestoneMode(initialTask.milestoneMode || 'all');
-      setBaselineCriteria(initialTask.baselineCriteria || []);
+      setUnit(initialTask.unit || ''); setMilestones(initialTask.milestones || []);
+      setMilestoneMode(initialTask.milestoneMode || 'all'); setBaselineCriteria(initialTask.baselineCriteria || []);
       setDaysOfWeek(initialTask.daysOfWeek || [1, 2, 3, 4, 5]);
       setDayOfMonth(initialTask.dayOfMonth ? String(initialTask.dayOfMonth) : '1');
       setMonthOfYear(initialTask.monthOfYear ? String(initialTask.monthOfYear) : '1');
       setIntervalDays(initialTask.intervalDays ? String(initialTask.intervalDays) : '2');
-      setTargetDate(initialTask.targetDate || '');
-      setReminderTime(initialTask.reminderTime || '');
+      setTargetDate(initialTask.targetDate || ''); setReminderTime(initialTask.reminderTime || '');
     } else {
-      setTitle('');
-      setGroupId(activeGroupId || groups[0]?.id || 'grp_personal');
-      setFlavor('checklist');
-      setFrequency('one_time');
-      setTargetAmount('4');
-      setStepAmount('1');
-      setUnit('L');
-      setMilestones([]);
-      setMilestoneMode('all');
+      setTitle(''); setGroupId(activeGroupId || groups[0]?.id || 'grp_personal');
+      setFlavor('checklist'); setFrequency('one_time'); setTargetAmount('4'); setStepAmount('1'); setUnit('L');
+      setMilestones([]); setMilestoneMode('all');
       setBaselineCriteria([{ id: 'crit_1', label: 'Distance', target: 2, unit: 'km', stepAmount: 0.5 }, { id: 'crit_2', label: 'Duration', target: 20, unit: 'min', stepAmount: 5 }]);
-      setDaysOfWeek([1, 2, 3, 4, 5]);
-      setDayOfMonth('1');
-      setMonthOfYear('1');
-      setIntervalDays('2');
-      setTargetDate(new Date().toISOString().split('T')[0]);
-      setReminderTime('');
+      setDaysOfWeek([1, 2, 3, 4, 5]); setDayOfMonth('1'); setMonthOfYear('1'); setIntervalDays('2');
+      setTargetDate(new Date().toISOString().split('T')[0]); setReminderTime('');
     }
   }, [initialTask, visible, groups, activeGroupId]);
 
   const handleSubmit = () => {
+    setTitleTouched(true);
     if (!title.trim()) return;
     const effectiveUserId = initialTask?.userId || userId;
     if (!effectiveUserId) {
@@ -116,9 +106,7 @@ export const CreateTaskModal: React.FC<Props> = ({
       milestoneMode: flavor === 'milestone' ? milestoneMode : undefined,
       baselineCriteria: flavor === 'flexible_baseline' ? baselineCriteria : undefined,
       reminderTime: reminderTime.trim() || undefined,
-      sortOrder: initialTask?.sortOrder || Date.now(),
-      createdAt: initialTask?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      sortOrder: initialTask?.sortOrder || Date.now(), createdAt: initialTask?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(),
     };
 
     onSave(taskData);
@@ -138,14 +126,23 @@ export const CreateTaskModal: React.FC<Props> = ({
 
           <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
             <View style={styles.field}>
-              <Text style={styles.label}>Habit Name</Text>
+              <Text style={styles.label}>
+                Habit Name <Text style={styles.requiredAsterisk}>*</Text>
+              </Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, titleTouched && !isTitleValid && styles.inputError]}
                 value={title}
-                onChangeText={setTitle}
+                onChangeText={(val) => {
+                  setTitle(val);
+                  if (titleTouched && val.trim()) setTitleTouched(false);
+                }}
+                onBlur={() => setTitleTouched(true)}
                 placeholder="e.g. Morning Water, Read 20 Pages"
                 placeholderTextColor={colors.textTertiary}
               />
+              {titleTouched && !isTitleValid && (
+                <Text style={styles.errorText}>Habit name is required.</Text>
+              )}
             </View>
 
             <View style={styles.field}>
@@ -224,7 +221,12 @@ export const CreateTaskModal: React.FC<Props> = ({
             <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSubmit} style={styles.submitBtn}>
+            <TouchableOpacity
+              onPress={handleSubmit}
+              disabled={!isTitleValid}
+              style={[styles.submitBtn, !isTitleValid && styles.submitBtnDisabled]}
+              activeOpacity={0.7}
+            >
               <Text style={styles.submitText}>{initialTask ? 'Save Changes' : 'Create Habit'}</Text>
             </TouchableOpacity>
           </View>

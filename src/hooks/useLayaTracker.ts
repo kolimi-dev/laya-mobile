@@ -47,7 +47,13 @@ export function useLayaTracker() {
   const loadUserData = useCallback(async (uid: string) => {
     const data = await StorageService.loadInitialData(uid);
     setGroups(data.groups); setTasks(data.tasks); setEvents(data.events); setDashboards(data.dashboards);
-    const valid = data.pinnedCharts.filter((c) => data.tasks.some((t) => t.id === c.taskId && !t.deletedAt));
+    const seen = new Set<string>();
+    const valid = data.pinnedCharts.filter((c) => {
+      const key = `${c.dashboardId || ''}:${c.taskId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return data.tasks.some((t) => t.id === c.taskId && !t.deletedAt);
+    });
     if (valid.length !== data.pinnedCharts.length) await StorageService.savePinnedCharts(valid, uid);
     setPinnedCharts(valid);
   }, []);
@@ -64,11 +70,11 @@ export function useLayaTracker() {
     (async () => {
       const stored = await AuthService.getStoredSession();
       if (stored) setSession(stored);
-      setProfile(await AuthService.getStoredProfile());
+      const prof = await AuthService.getStoredProfile();
+      setProfile(prof);
+      await NotificationService.scheduleEodReviewReminder(prof.sleepingTime || '20:00', prof.eodNotificationsEnabled ?? true);
       const uid = stored?.userId || 'usr_guest';
-      await loadUserData(uid);
-      await logger.init(uid);
-      setLoading(false);
+      await loadUserData(uid); await logger.init(uid); setLoading(false);
     })();
   }, [loadUserData]);
 
@@ -107,24 +113,20 @@ export function useLayaTracker() {
     }
   };
   const handleToggleMilestone = async (taskId: string, milestoneId: string) => {
-    const existing = evaluatedTasks.find((e) => e.task.id === taskId);
-    const current = existing?.completedMilestones || [];
+    const existing = evaluatedTasks.find((e) => e.task.id === taskId), current = existing?.completedMilestones || [];
     const next = current.includes(milestoneId) ? current.filter((m) => m !== milestoneId) : [...current, milestoneId];
     await appendEvent({ taskId, status: 'in_progress', completedMilestones: next, skippedMilestones: existing?.skippedMilestones || [] }, 'toggle_milestone', { taskId, milestoneId });
   };
   const handleSkipMilestone = async (taskId: string, milestoneId: string, reason?: string) => {
-    const existing = evaluatedTasks.find((e) => e.task.id === taskId);
-    const current = existing?.skippedMilestones || [];
+    const existing = evaluatedTasks.find((e) => e.task.id === taskId), current = existing?.skippedMilestones || [];
     const next = reason !== undefined ? (current.includes(milestoneId) ? current : [...current, milestoneId]) : current.filter((m) => m !== milestoneId);
     await appendEvent({ taskId, status: 'in_progress', completedMilestones: existing?.completedMilestones || [], skippedMilestones: next, notes: reason }, 'skip_milestone', { taskId, milestoneId, reason });
   };
   const handleUpdateQuantified = async (taskId: string, delta: number, criterionId?: string) => {
     const existing = evaluatedTasks.find((e) => e.task.id === taskId);
     if (criterionId) {
-      const currentMap = existing?.criterionValues || {};
-      const nextVal = Math.max(0, Math.round(((currentMap[criterionId] || 0) + delta) * 100) / 100);
-      const nextMap = { ...currentMap, [criterionId]: nextVal };
-      await appendEvent({ taskId, status: 'in_progress', criterionValues: nextMap, activeCriterionId: criterionId }, 'update_flexible_criterion', { taskId, criterionId, delta, nextVal });
+      const currentMap = existing?.criterionValues || {}, nextVal = Math.max(0, Math.round(((currentMap[criterionId] || 0) + delta) * 100) / 100);
+      await appendEvent({ taskId, status: 'in_progress', criterionValues: { ...currentMap, [criterionId]: nextVal }, activeCriterionId: criterionId }, 'update_flexible_criterion', { taskId, criterionId, delta, nextVal });
     } else {
       const nextVal = Math.max(0, Math.round(((existing?.quantifiedValue || 0) + delta) * 100) / 100);
       await appendEvent({ taskId, status: 'in_progress', quantifiedValue: nextVal }, 'update_quantified', { taskId, delta, nextVal });
@@ -134,8 +136,7 @@ export function useLayaTracker() {
     const nextVal = Math.max(0, Math.round(val * 100) / 100);
     if (criterionId) {
       const existing = evaluatedTasks.find((e) => e.task.id === taskId);
-      const nextMap = { ...(existing?.criterionValues || {}), [criterionId]: nextVal };
-      await appendEvent({ taskId, status: 'in_progress', criterionValues: nextMap, activeCriterionId: criterionId }, 'set_flexible_criterion', { taskId, criterionId, val: nextVal });
+      await appendEvent({ taskId, status: 'in_progress', criterionValues: { ...(existing?.criterionValues || {}), [criterionId]: nextVal }, activeCriterionId: criterionId }, 'set_flexible_criterion', { taskId, criterionId, val: nextVal });
     } else {
       await appendEvent({ taskId, status: 'in_progress', quantifiedValue: nextVal }, 'set_quantified_exact', { taskId, val: nextVal });
     }
@@ -145,10 +146,13 @@ export function useLayaTracker() {
     const nextStatus = isCurrentlyIgnored ? 'in_progress' : 'ignored';
     await appendEvent({ taskId, status: nextStatus, notes }, 'toggle_ignore', { taskId, status: nextStatus, notes });
   };
-  const handlePinTaskChart = async (taskId: string, chartType?: ChartVisualizerStyle, dashboardId?: string) => {
+  const handlePinTaskChart = async (taskId: string, chartType?: ChartVisualizerStyle, dashboardId?: string): Promise<{ added: boolean }> => {
+    const targetDash = dashboardId || '';
+    if (pinnedCharts.some((c) => c.taskId === taskId && (c.dashboardId || '') === targetDash)) return { added: false };
     const resolvedType = chartType || (tasks.find((t) => t.id === taskId)?.targetAmount ? 'volume_bars' : 'activity_heatmap');
     const nextList: PinnedChart[] = [...pinnedCharts, { id: generateUUID('chr'), taskId, dashboardId, chartType: resolvedType, sortOrder: pinnedCharts.length }];
     setPinnedCharts(nextList); await StorageService.savePinnedCharts(nextList, activeUserId);
+    return { added: true };
   };
   const handleCreateDashboard = async (dash: UserDashboard) => { await StorageService.saveDashboard(dash, activeUserId); setDashboards((prev) => [...prev, dash]); };
   const handleUpdateDashboard = async (dash: UserDashboard) => { await StorageService.saveDashboard(dash, activeUserId); setDashboards((prev) => prev.map((d) => (d.id === dash.id ? dash : d))); };
@@ -156,8 +160,7 @@ export function useLayaTracker() {
   const handleMoveChart = async (chartId: string, direction: 'up' | 'down') => {
     const idx = pinnedCharts.findIndex((c) => c.id === chartId), targetIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (idx < 0 || targetIdx < 0 || targetIdx >= pinnedCharts.length) return;
-    const list = [...pinnedCharts];
-    [list[idx], list[targetIdx]] = [list[targetIdx], list[idx]];
+    const list = [...pinnedCharts]; [list[idx], list[targetIdx]] = [list[targetIdx], list[idx]];
     setPinnedCharts(list); await StorageService.savePinnedCharts(list, activeUserId);
   };
   const handleRemoveChart = async (chartId: string) => {
@@ -165,13 +168,11 @@ export function useLayaTracker() {
     setPinnedCharts(list); await StorageService.savePinnedCharts(list, activeUserId);
   };
   const handleSaveNewTask = async (task: Task) => {
-    await StorageService.saveTask(task, activeUserId);
-    await NotificationService.scheduleTaskReminder(task);
+    await StorageService.saveTask(task, activeUserId); await NotificationService.scheduleTaskReminder(task);
     setTasks(tasks.some((t) => t.id === task.id) ? tasks.map((t) => (t.id === task.id ? task : t)) : [...tasks, task]);
   };
   const handleDeleteTask = async (taskId: string) => {
-    await StorageService.softDeleteTask(taskId, activeUserId);
-    await NotificationService.cancelTaskReminder(taskId);
+    await StorageService.softDeleteTask(taskId, activeUserId); await NotificationService.cancelTaskReminder(taskId);
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, deletedAt: new Date().toISOString() } : t)));
     const clean = pinnedCharts.filter((c) => c.taskId !== taskId);
     if (clean.length !== pinnedCharts.length) { setPinnedCharts(clean); await StorageService.savePinnedCharts(clean, activeUserId); }
@@ -181,8 +182,7 @@ export function useLayaTracker() {
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, deletedAt: null, archivedAt: null, lifecycleStatus: 'active' } : t)));
   };
   const handlePurgeTask = async (taskId: string) => {
-    await StorageService.purgeTaskPermanently(taskId, activeUserId);
-    setTasks(tasks.filter((t) => t.id !== taskId));
+    await StorageService.purgeTaskPermanently(taskId, activeUserId); setTasks(tasks.filter((t) => t.id !== taskId));
     const clean = pinnedCharts.filter((c) => c.taskId !== taskId);
     if (clean.length !== pinnedCharts.length) { setPinnedCharts(clean); await StorageService.savePinnedCharts(clean, activeUserId); }
   };
@@ -202,8 +202,7 @@ export function useLayaTracker() {
     const fallbackId = groups.find((g) => g.id !== groupId)?.id || 'grp_personal';
     const updatedTasks = tasks.map((t) => (t.groupId === groupId ? { ...t, groupId: fallbackId } : t));
     setTasks(updatedTasks); setGroups((prev) => prev.filter((g) => g.id !== groupId));
-    await StorageService.saveAllData(activeUserId, { tasks: updatedTasks });
-    await StorageService.deleteGroup(groupId, activeUserId);
+    await StorageService.saveAllData(activeUserId, { tasks: updatedTasks }); await StorageService.deleteGroup(groupId, activeUserId);
     if (activeGroupId === groupId) setActiveGroupId(null);
   };
   const handleReorderTasks = async (ids: string[]) => {
@@ -214,7 +213,11 @@ export function useLayaTracker() {
     const updated = groups.map((g) => { const idx = ids.indexOf(g.id); return idx >= 0 ? { ...g, sortOrder: (idx + 1) * 10 } : g; });
     setGroups(updated); await StorageService.saveAllData(activeUserId, { groups: updated });
   };
-  const handleUpdateProfile = async (p: UserProfile) => { await AuthService.saveProfile(p); setProfile(p); };
+  const handleUpdateProfile = async (p: UserProfile) => {
+    await AuthService.saveProfile(p);
+    await NotificationService.scheduleEodReviewReminder(p.sleepingTime || '20:00', p.eodNotificationsEnabled ?? true);
+    setProfile(p);
+  };
   const handleLogout = async () => { await AuthService.logout(); setSession(null); setIsAuthSkipped(false); };
 
   return {

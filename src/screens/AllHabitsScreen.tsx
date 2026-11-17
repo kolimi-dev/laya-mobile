@@ -7,21 +7,23 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { ColorPalette, spacing, radiuses, typography } from '../theme/tokens';
-import { Task, UserGroup } from '../core/types';
+import { Task, UserGroup, PinnedChart } from '../core/types';
 
 interface Props {
   tasks: Task[];
   groups: UserGroup[];
+  pinnedCharts?: PinnedChart[];
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string, title: string) => void;
   onAddNew: () => void;
-  onPinChart?: (taskId: string) => void;
+  onPinChart?: (taskId: string) => Promise<{ added: boolean } | void> | { added: boolean } | void;
   onSetLifecycleStatus?: (taskId: string, status: 'active' | 'completed' | 'paused' | 'retired') => void;
 }
 
 export const AllHabitsScreen: React.FC<Props> = ({
   tasks,
   groups,
+  pinnedCharts,
   onEditTask,
   onDeleteTask,
   onAddNew,
@@ -131,9 +133,18 @@ export const AllHabitsScreen: React.FC<Props> = ({
                     {onPinChart && (
                       <TouchableOpacity
                         style={styles.actionBtn}
-                        onPress={() => {
-                          onPinChart(t.id);
-                          Alert.alert('Chart Pinned', `Pinned "${t.title}" to your active dashboard!`);
+                        onPress={async () => {
+                          const isAlreadyPinned = pinnedCharts?.some((c) => c.taskId === t.id && !c.dashboardId);
+                          if (isAlreadyPinned) {
+                            Alert.alert('Chart Already Pinned', 'A chart for this habit is already on your active dashboard');
+                            return;
+                          }
+                          const res = await onPinChart(t.id);
+                          if (res && res.added === false) {
+                            Alert.alert('Chart Already Pinned', 'A chart for this habit is already on your active dashboard');
+                          } else {
+                            Alert.alert('Chart Pinned', `Pinned "${t.title}" to your active dashboard!`);
+                          }
                         }}
                         activeOpacity={0.7}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

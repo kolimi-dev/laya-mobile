@@ -1,15 +1,28 @@
 /**
  * Laya (లయ) Mobile — User Profile & OAuth Providers Modal (ADR-0010, ADR-0011)
- * Displays User ID, Email, Phone with Country Picker, and OAuth Providers
+ * Displays User ID, Email, Phone with Country Picker, Sleeping Time, and EOD Notification Settings
  */
 
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { AuthService, AuthSession, UserProfile } from '../services/auth';
+import { NotificationService } from '../services/notifications';
 import { CountryCode, COUNTRY_CODES, DEFAULT_COUNTRY } from '../data/countryCodes';
 import { CountryCodePickerModal } from './CountryCodePickerModal';
 import { getStyles } from './ProfileModal.styles';
+
+const PROVIDERS = [
+  { icon: '🔑', name: 'Kolimi ID', desc: 'Resend OTP (auth@kolimi.dev)', live: true },
+  { icon: '🌐', name: 'Google Account', desc: 'Platform Single Sign-On', live: false },
+  { icon: '🐙', name: 'GitHub Account', desc: 'Developer SSO & Keys', live: false },
+];
+const PRESET_TIMES = [
+  { label: '8:00 PM', value: '20:00' },
+  { label: '9:00 PM', value: '21:00' },
+  { label: '10:00 PM', value: '22:00' },
+  { label: '11:00 PM', value: '23:00' },
+];
 
 interface Props {
   visible: boolean;
@@ -21,39 +34,24 @@ interface Props {
 }
 
 export const ProfileModal: React.FC<Props> = ({
-  visible,
-  session,
-  onClose,
-  onLogout,
-  onOpenGuide,
-  onSaveProfile,
+  visible, session, onClose, onLogout, onOpenGuide, onSaveProfile,
 }) => {
-  const { colors } = useTheme();
-  const styles = getStyles(colors);
-  const [name, setName] = useState('');
-  const [phoneDigits, setPhoneDigits] = useState('');
+  const { colors } = useTheme(), styles = getStyles(colors);
+  const [name, setName] = useState(''), [phoneDigits, setPhoneDigits] = useState('');
+  const [sleepingTime, setSleepingTime] = useState('20:00'), [eodNotificationsEnabled, setEodNotificationsEnabled] = useState(true);
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>(DEFAULT_COUNTRY);
-  const [pickerVisible, setPickerVisible] = useState(false);
-  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+  const [pickerVisible, setPickerVisible] = useState(false), [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) {
       AuthService.getStoredProfile().then((p) => {
         setName(p.name || '');
-        const rawPhone = (p.phone || '').trim();
-        if (rawPhone) {
-          const matched = COUNTRY_CODES.find((c) => rawPhone.startsWith(c.dialCode));
-          if (matched) {
-            setSelectedCountry(matched);
-            setPhoneDigits(rawPhone.slice(matched.dialCode.length).trim());
-          } else {
-            setSelectedCountry(DEFAULT_COUNTRY);
-            setPhoneDigits(rawPhone);
-          }
-        } else {
-          setSelectedCountry(DEFAULT_COUNTRY);
-          setPhoneDigits('');
-        }
+        setSleepingTime(p.sleepingTime || '20:00');
+        setEodNotificationsEnabled(p.eodNotificationsEnabled ?? true);
+        const raw = (p.phone || '').trim();
+        const matched = raw ? COUNTRY_CODES.find((c) => raw.startsWith(c.dialCode)) : null;
+        setSelectedCountry(matched || DEFAULT_COUNTRY);
+        setPhoneDigits(matched ? raw.slice(matched.dialCode.length).trim() : raw);
         setStatusMsg(null);
       });
     }
@@ -61,8 +59,9 @@ export const ProfileModal: React.FC<Props> = ({
 
   const handleSave = async () => {
     const fullPhone = phoneDigits.trim() ? `${selectedCountry.dialCode} ${phoneDigits.trim()}` : '';
-    const updated: UserProfile = { name: name.trim(), phone: fullPhone };
+    const updated: UserProfile = { name: name.trim(), phone: fullPhone, sleepingTime: sleepingTime.trim() || '20:00', eodNotificationsEnabled };
     await AuthService.saveProfile(updated);
+    await NotificationService.scheduleEodReviewReminder(updated.sleepingTime || '20:00', updated.eodNotificationsEnabled ?? true);
     onSaveProfile?.(updated);
     setStatusMsg('Profile updated');
     setTimeout(() => setStatusMsg(null), 2500);
@@ -71,15 +70,7 @@ export const ProfileModal: React.FC<Props> = ({
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          await AuthService.logout();
-          onClose();
-          onLogout();
-        },
-      },
+      { text: 'Sign Out', style: 'destructive', onPress: async () => { await AuthService.logout(); onClose(); onLogout(); } },
     ]);
   };
 
@@ -102,14 +93,10 @@ export const ProfileModal: React.FC<Props> = ({
                 <Text style={styles.avatarText}>{name ? name[0].toUpperCase() : email[0].toUpperCase()}</Text>
               </View>
               <View style={styles.identityDetails}>
-                <Text style={styles.identityName} numberOfLines={1}>
-                  {name || (session ? email.split('@')[0] : 'Guest User')}
-                </Text>
+                <Text style={styles.identityName} numberOfLines={1}>{name || (session ? email.split('@')[0] : 'Guest User')}</Text>
                 <View style={styles.statusPillRow}>
                   <View style={session ? styles.verifiedPill : styles.offlinePill}>
-                    <Text style={session ? styles.verifiedPillText : styles.offlinePillText}>
-                      {session ? '✓ Kolimi ID Verified' : 'Local Offline Mode'}
-                    </Text>
+                    <Text style={session ? styles.verifiedPillText : styles.offlinePillText}>{session ? '✓ Kolimi ID Verified' : 'Local Offline Mode'}</Text>
                   </View>
                 </View>
               </View>
@@ -117,13 +104,7 @@ export const ProfileModal: React.FC<Props> = ({
 
             <View style={styles.field}>
               <Text style={styles.label}>Display Name</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g. Alice"
-                placeholderTextColor={colors.textTertiary}
-              />
+              <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="e.g. Alice" placeholderTextColor={colors.textTertiary} />
             </View>
 
             <View style={styles.field}>
@@ -139,61 +120,66 @@ export const ProfileModal: React.FC<Props> = ({
                   <Text style={styles.dialCode}>{selectedCountry.dialCode}</Text>
                   <Text style={styles.chevron}>▾</Text>
                 </TouchableOpacity>
+                <TextInput style={[styles.input, styles.phoneInput]} value={phoneDigits} onChangeText={setPhoneDigits} placeholder="98765 43210" placeholderTextColor={colors.textTertiary} keyboardType="phone-pad" />
+              </View>
+            </View>
 
-                <TextInput
-                  style={[styles.input, styles.phoneInput]}
-                  value={phoneDigits}
-                  onChangeText={setPhoneDigits}
-                  placeholder="98765 43210"
-                  placeholderTextColor={colors.textTertiary}
-                  keyboardType="phone-pad"
-                />
+            <View style={styles.field}>
+              <Text style={styles.label}>Sleeping Time (Default: 8:00 PM / 20:00)</Text>
+              <TextInput style={styles.input} value={sleepingTime} onChangeText={setSleepingTime} placeholder="20:00" placeholderTextColor={colors.textTertiary} />
+              <View style={styles.timePresetRow}>
+                {PRESET_TIMES.map((item) => (
+                  <TouchableOpacity
+                    key={item.value}
+                    style={[styles.timePresetPill, sleepingTime === item.value && styles.timePresetPillActive]}
+                    onPress={() => setSleepingTime(item.value)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.timePresetText, sleepingTime === item.value && styles.timePresetTextActive]}>{item.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <View style={styles.settingToggleRow}>
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text style={styles.settingToggleLabel}>🌙 Evening Rhythm Review</Text>
+                  <Text style={styles.settingToggleDesc}>Offline notification at sleeping time to wind down</Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.toggleSwitch, eodNotificationsEnabled && styles.toggleSwitchActive]}
+                  onPress={() => setEodNotificationsEnabled(!eodNotificationsEnabled)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.toggleSwitchText, eodNotificationsEnabled && styles.toggleSwitchTextActive]}>
+                    {eodNotificationsEnabled ? 'Enabled' : 'Disabled'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
 
             <View style={styles.oauthSection}>
               <Text style={styles.sectionHeading}>Connected Accounts & OAuth</Text>
-              <View style={styles.providerRow}>
-                <Text style={styles.providerIcon}>🔑</Text>
-                <View style={styles.providerInfo}>
-                  <Text style={styles.providerName}>Kolimi ID</Text>
-                  <Text style={styles.providerDesc}>Resend OTP (auth@kolimi.dev)</Text>
+              {PROVIDERS.map((p) => (
+                <View key={p.name} style={styles.providerRow}>
+                  <Text style={styles.providerIcon}>{p.icon}</Text>
+                  <View style={styles.providerInfo}>
+                    <Text style={styles.providerName}>{p.name}</Text>
+                    <Text style={styles.providerDesc}>{p.desc}</Text>
+                  </View>
+                  <View style={p.live && session ? styles.activePill : styles.comingSoonPill}>
+                    <Text style={p.live && session ? styles.activePillText : styles.comingSoonPillText}>
+                      {p.live ? (session ? 'Connected' : 'Offline') : 'Coming Soon'}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.activePill}>
-                  <Text style={styles.activePillText}>{session ? 'Connected' : 'Offline'}</Text>
-                </View>
-              </View>
-
-              <View style={styles.providerRow}>
-                <Text style={styles.providerIcon}>🌐</Text>
-                <View style={styles.providerInfo}>
-                  <Text style={styles.providerName}>Google Account</Text>
-                  <Text style={styles.providerDesc}>Platform Single Sign-On</Text>
-                </View>
-                <View style={styles.comingSoonPill}>
-                  <Text style={styles.comingSoonPillText}>Coming Soon (Beta)</Text>
-                </View>
-              </View>
-
-              <View style={styles.providerRow}>
-                <Text style={styles.providerIcon}>🐙</Text>
-                <View style={styles.providerInfo}>
-                  <Text style={styles.providerName}>GitHub Account</Text>
-                  <Text style={styles.providerDesc}>Developer SSO & Keys</Text>
-                </View>
-                <View style={styles.comingSoonPill}>
-                  <Text style={styles.comingSoonPillText}>Coming Soon (Beta)</Text>
-                </View>
-              </View>
+              ))}
             </View>
 
             <View style={[styles.oauthSection, { marginTop: 12 }]}>
               <Text style={styles.sectionHeading}>Help & Onboarding</Text>
-              <TouchableOpacity
-                style={styles.providerRow}
-                onPress={() => { onClose(); onOpenGuide?.(); }}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity style={styles.providerRow} onPress={() => { onClose(); onOpenGuide?.(); }} activeOpacity={0.7}>
                 <Text style={styles.providerIcon}>📖</Text>
                 <View style={styles.providerInfo}>
                   <Text style={styles.providerName}>App Tour & Guide</Text>

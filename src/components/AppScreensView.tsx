@@ -40,7 +40,7 @@ interface Props {
   onCreateDashboard: (dash: UserDashboard) => Promise<void>;
   onUpdateDashboard: (dash: UserDashboard) => Promise<void>;
   onDeleteDashboard: (id: string) => Promise<void>;
-  onPinChart: (taskId: string, chartType?: ChartVisualizerStyle, dashId?: string) => Promise<void>;
+  onPinChart: (taskId: string, chartType?: ChartVisualizerStyle, dashId?: string) => Promise<{ added: boolean }>;
   onMoveChart: (chartId: string, dir: 'up' | 'down') => Promise<void>;
   onRemoveChart: (chartId: string) => Promise<void>;
   onReactivateTask: (taskId: string) => Promise<void>;
@@ -100,6 +100,7 @@ export const AppScreensView: React.FC<Props> = (props) => {
         <AllHabitsScreen
           tasks={props.tasks}
           groups={props.groups}
+          pinnedCharts={props.pinnedCharts}
           onEditTask={props.onEditTask}
           onDeleteTask={props.onDeleteTask}
           onAddNew={props.onAddNewTask}

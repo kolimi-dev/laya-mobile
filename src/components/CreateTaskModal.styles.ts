@@ -99,6 +99,21 @@ export const getStyles = (colors: ColorPalette = darkColors) =>
       paddingHorizontal: spacing.lg,
       paddingVertical: 8,
     },
+    submitBtnDisabled: {
+      opacity: 0.35,
+    },
+    inputError: {
+      borderColor: colors.danger,
+    },
+    errorText: {
+      color: colors.danger,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    requiredAsterisk: {
+      color: colors.primary,
+      fontWeight: '700',
+    },
     submitText: {
       color: colors.bgDark,
       fontSize: typography.body,
