@@ -2,7 +2,7 @@
   "expo": {
     "name": "Laya (లయ)",
     "slug": "laya",
-    "version": "1.2.3",
+    "version": "1.2.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -14,7 +14,7 @@
     "backgroundColor": "#0E0F12",
     "android": {
       "package": "dev.kolimi.laya",
-      "versionCode": 6,
+      "versionCode": 7,
       "adaptiveIcon": {
         "backgroundColor": "#0E0F12",
         "foregroundImage": "./assets/android-icon-foreground.png",
