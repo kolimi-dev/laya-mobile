@@ -1,6 +1,6 @@
 {
   "latestVersion": "1.2.4",
-  "apkUrl": "https://expo.dev/artifacts/eas/BMTsnXw8bDxRuygY_qhx5Z15Et9RpG_8PnQ_s5F_5pA.apk",
+  "apkUrl": "https://expo.dev/artifacts/eas/BNOI6gCpHG3z9povg2-RwxHwKdd43RY_BYNRUUfMitE.apk",
   "releaseNotes": [
     "Dashboard chart deduplication: prevents duplicate charts for the same habit",
     "Mandatory habit name validation with accent asterisk and disabled submit guard",
