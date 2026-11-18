@@ -78,6 +78,18 @@ Real-world human habits do not reset at midnight. Reading, meditating, or finish
   *“🌙 Evening Rhythm Review: Review today’s habits and wind down without streak guilt!”*
 - Handles one-time habits, specific weekday masks (`days_of_week`), and auto-cancels alerts when habits are paused, archived, or deleted.
 
+#### 5. Frequency Models & "Whenever" (Anytime) Task Semantics
+Laya supports distinct scheduling models tailored to how humans actually organize responsibilities:
+- **Calendar & Recurring Cadences:**
+  - `Daily`: Resets every operational morning (04:00 AM). Completion logs belong strictly to that day's record.
+  - `Days of Week`, `Monthly`, `Yearly`, `Custom`: Anchor to cyclic schedule rules and roll forward when uncompleted (ADR-0019).
+- **Single-Occurrence (`Once`):**
+  - Targets a single completion. Once checked off, it transitions to `lifecycleStatus: 'completed'` and moves to the Inactive/Archive list.
+- **Cadence-Free Backlog (`Whenever` / `anytime`):**
+  - **Concept:** Designed for date-less, open-ended tasks and flexible backlog intentions (e.g. *"Clean garage"*, *"Call an old friend"*, *"Declutter bookshelves"*).
+  - **No Calendar Deadline:** Does not belong to any specific day of the week or calendar date; sits in the active rhythm whenever life allows without calendar pressure.
+  - **Event Evaluation:** Evaluates completion across historical events (`filterEventsForTaskCadence`), keeping the task in rhythm without imposing arbitrary due date anxiety.
+
 ---
 
 ## 2. Release & Publishing Workflow (How Publishing Currently Works)
